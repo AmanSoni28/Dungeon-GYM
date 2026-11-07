@@ -1,0 +1,328 @@
+/* ════════ Real gym: step inside ════════ */
+
+/* Overlap the gate's last (fully golden) screen: no blank gold scroll between the two scenes.
+   The section is invisible until its pin starts, i.e. the exact moment the gate's pin ends. */
+.realgym-wrap {
+  position: relative;
+  z-index: 2;
+  margin-top: -100svh;
+}
+.realgym:not(.is-entered) {
+  visibility: hidden;
+}
+
+.realgym {
+  --light: 1;
+  --ui: 0;
+  --prompt: 0;
+  --stage-filter: blur(6px);
+  --fade: 0;
+  --rg-black: #050505;
+  --rg-black-2: #111111;
+  --rg-gold: #d4af37;
+  --rg-champagne: #f5d98b;
+
+  position: relative;
+  height: 100svh;
+  overflow: hidden;
+  background: var(--rg-black);
+  color: #fff;
+}
+
+.realgym__stage {
+  position: absolute;
+  inset: 0;
+  filter: var(--stage-filter);
+  outline: none;
+  touch-action: pan-y; /* vertical swipes keep scrolling the page, horizontal swipes look around */
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+  &:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--rg-gold);
+  }
+  canvas {
+    display: block;
+  }
+}
+
+.realgym__loading {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 55%, #1a140a, var(--rg-black) 70%);
+  transition: opacity 0.8s;
+  pointer-events: none;
+
+  &.is-hidden {
+    opacity: 0;
+  }
+}
+
+.realgym__vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 50%, transparent 45%, rgb(5 5 5 / 0.75) 100%),
+    linear-gradient(to bottom, rgb(5 5 5 / 0.65), transparent 22%, transparent 70%, rgb(5 5 5 / 0.8));
+}
+
+/* the golden light carried through the gate: identical gradient to the gate's flash */
+.realgym__light {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--light);
+  background: radial-gradient(circle at 50% 45%, #fff6dc, var(--rg-champagne) 35%, var(--rg-gold) 70%, #6b5214 100%);
+}
+
+.realgym__fade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--fade);
+  background: var(--rg-black);
+}
+
+.realgym__ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--ui);
+
+  button {
+    pointer-events: auto;
+  }
+}
+
+.realgym__head {
+  position: absolute;
+  top: clamp(90px, 14vh, 140px);
+  left: var(--gutter);
+  display: grid;
+  gap: 10px;
+  max-width: 520px;
+}
+
+.realgym__title {
+  font-size: clamp(48px, 7vw, 110px);
+  text-shadow: 0 6px 40px rgb(0 0 0 / 0.7);
+}
+
+.realgym__label {
+  font-size: 12px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #d8d2c4;
+}
+
+.realgym__hint {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  background: rgb(5 5 5 / 0.55);
+  border: 1px solid rgb(212 175 55 / 0.4);
+  backdrop-filter: blur(8px);
+  transition: opacity 0.8s, translate 0.8s var(--ease-out);
+
+  &.is-done {
+    opacity: 0;
+    translate: -50% -30%;
+  }
+}
+
+.realgym__hand {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--rg-champagne);
+  border-radius: 50%;
+  animation: rg-hand 2.2s var(--ease-in-out) infinite;
+}
+@keyframes rg-hand {
+  0%, 100% { transform: translateX(-10px); }
+  50% { transform: translateX(10px); }
+}
+
+/* explore meter: window marker slides with the view, fill shows how much has been seen */
+.realgym__meter {
+  --pos: 0.5;
+  --explored: 0;
+  /* bottom-left: the bottom-right corner belongs to the floating WhatsApp button */
+  position: absolute;
+  left: var(--gutter);
+  bottom: clamp(24px, 5vh, 44px);
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  width: min(240px, 46vw);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #cfc8b8;
+
+  b {
+    color: var(--rg-champagne);
+    font-variant-numeric: tabular-nums;
+  }
+}
+.realgym__track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.12);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    transform-origin: left;
+    transform: scaleX(var(--explored));
+    background: linear-gradient(90deg, rgb(212 175 55 / 0.35), rgb(245 217 139 / 0.5));
+  }
+}
+.realgym__window {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--pos) * (100% - 34px));
+  width: 34px;
+  height: 10px;
+  translate: 0 -50%;
+  border-radius: 6px;
+  background: var(--rg-gold);
+  box-shadow: 0 0 14px var(--rg-gold);
+}
+
+.realgym__views {
+  position: absolute;
+  left: var(--gutter);
+  bottom: calc(clamp(24px, 5vh, 44px) + 48px); /* sits above the explore meter */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.realgym__prompt {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(90px, 16vh, 160px);
+  translate: -50% 0;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  opacity: var(--prompt);
+  transform: translateY(calc((1 - var(--prompt)) * 20px));
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #cfc8b8;
+  text-shadow: 0 2px 12px rgb(0 0 0 / 0.9);
+  isolation: isolate;
+  pointer-events: none;
+
+  button {
+    pointer-events: auto;
+  }
+
+  /* soft dark pool so the prompt reads over the busy gym floor */
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -40px -90px;
+    z-index: -1;
+    background: radial-gradient(closest-side, rgb(5 5 5 / 0.7), transparent);
+    pointer-events: none;
+  }
+
+  .realgym:not(.is-prompt) & button {
+    pointer-events: none;
+  }
+}
+
+.realgym__enter {
+  position: relative;
+  padding: 18px 40px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: clamp(22px, 2.4vw, 32px);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rg-black);
+  background: linear-gradient(120deg, #9c7a1e, var(--rg-gold) 40%, var(--rg-champagne) 60%, var(--rg-gold));
+  box-shadow: 0 16px 60px -12px rgb(212 175 55 / 0.8);
+  cursor: pointer;
+  transition: transform 0.4s var(--ease-out), box-shadow 0.4s;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 20px 80px -10px rgb(212 175 55 / 0.95);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--rg-champagne);
+    outline-offset: 4px;
+  }
+}
+
+/* ── no-WebGL fallback ── */
+.gymfb {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    user-select: none;
+    -webkit-user-drag: none;
+    will-change: transform;
+    filter: contrast(1.06);
+  }
+}
+
+@media (max-width: 640px) {
+  .realgym__meter {
+    right: calc(var(--gutter) + 72px); /* clear of the WhatsApp button */
+    width: auto;
+  }
+  .realgym__prompt {
+    bottom: 110px;
+  }
+}
+
+/* short landscape screens: keep the title and the Enter prompt from colliding */
+@media (max-height: 520px) {
+  .realgym__head {
+    top: 72px;
+  }
+  .realgym__title {
+    font-size: 40px;
+  }
+  .realgym__prompt {
+    bottom: 76px;
+    gap: 8px;
+  }
+  .realgym__enter {
+    padding: 12px 30px;
+    font-size: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .realgym__stage {
+    filter: none;
+  }
+}

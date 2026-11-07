@@ -3,7 +3,8 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
-import { makeGlowTexture, makeStoneTexture } from "./textures";
+import { Environment, Lightformer } from "@react-three/drei";
+import { makeGlowTexture, makeStoneTexture, makeTextTexture } from "./textures";
 import { lerp, rand, smoothstep } from "@/lib/utils";
 
 type Prog = React.MutableRefObject<number>;
@@ -127,34 +128,103 @@ function Torches() {
 }
 
 /* ── The iron gate (two doors that swing open with scroll) ── */
+// Premium black + metallic-gold gate materials
+const BLACK_METAL = { color: "#0c0c0d", metalness: 0.92, roughness: 0.3 };
+const GOLD_METAL = { color: "#D4AF37", metalness: 1, roughness: 0.22, emissive: "#4a3608", emissiveIntensity: 0.35 };
+const CHAMPAGNE = { color: "#F5D98B", metalness: 1, roughness: 0.18, emissive: "#5a4512", emissiveIntensity: 0.3 };
+
 function GateDoor({ side }: { side: 1 | -1 }) {
-  // side = -1 → left door (hinge at x=-2.3); +1 → right door
+  // side = -1 → left door (hinge at x=-2.3); +1 → right door. Door extends from the hinge toward the centre.
   const bars = Array.from({ length: 7 }, (_, i) => 0.18 + i * 0.32);
+  const x = (v: number) => -side * v;
   return (
     <group>
+      {/* stiles (hinge side + meeting side) */}
+      {[0.05, 2.25].map((v) => (
+        <mesh key={v} position={[x(v), 2.55, 0]}>
+          <boxGeometry args={[0.12, 5.1, 0.14]} />
+          <meshStandardMaterial {...BLACK_METAL} />
+        </mesh>
+      ))}
+      {/* bars with gold collars */}
       {bars.map((b) => (
-        <mesh key={b} position={[-side * b, 2.5, 0]}>
-          <cylinderGeometry args={[0.055, 0.055, 5, 8]} />
-          <meshStandardMaterial {...IRON} />
-        </mesh>
+        <group key={b}>
+          <mesh position={[x(b), 2.5, 0]}>
+            <cylinderGeometry args={[0.05, 0.05, 5, 12]} />
+            <meshStandardMaterial {...BLACK_METAL} />
+          </mesh>
+          {[1.15, 3.95].map((y) => (
+            <mesh key={y} position={[x(b), y, 0]}>
+              <cylinderGeometry args={[0.07, 0.07, 0.06, 16]} />
+              <meshStandardMaterial {...GOLD_METAL} />
+            </mesh>
+          ))}
+          {/* gold spear finial */}
+          <mesh position={[x(b), 5.2, 0]}>
+            <coneGeometry args={[0.085, 0.32, 8]} />
+            <meshStandardMaterial {...CHAMPAGNE} />
+          </mesh>
+          <mesh position={[x(b), 5.02, 0]}>
+            <sphereGeometry args={[0.07, 12, 12]} />
+            <meshStandardMaterial {...GOLD_METAL} />
+          </mesh>
+        </group>
       ))}
-      {[0.4, 1.9, 3.4, 4.8].map((y) => (
-        <mesh key={y} position={[-side * 1.15, y, 0]}>
-          <boxGeometry args={[2.3, 0.16, 0.12]} />
-          <meshStandardMaterial {...IRON} />
-        </mesh>
+      {/* rails with a gold inlay line */}
+      {[0.95, 2.0, 3.3, 4.85].map((y) => (
+        <group key={y}>
+          <mesh position={[x(1.15), y, 0]}>
+            <boxGeometry args={[2.3, 0.15, 0.13]} />
+            <meshStandardMaterial {...BLACK_METAL} />
+          </mesh>
+          <mesh position={[x(1.15), y, 0.068]}>
+            <boxGeometry args={[2.22, 0.025, 0.01]} />
+            <meshStandardMaterial {...GOLD_METAL} />
+          </mesh>
+        </group>
       ))}
-      {/* gold emblem on each door */}
-      <mesh position={[-side * 1.15, 2.65, 0.08]} rotation-x={Math.PI / 2}>
-        <torusGeometry args={[0.38, 0.05, 10, 32]} />
-        <meshStandardMaterial color="#c9a24b" metalness={1} roughness={0.25} emissive="#7a5a1a" emissiveIntensity={0.6} />
+      {/* solid kick plate with gold border */}
+      <mesh position={[x(1.15), 0.5, 0]}>
+        <boxGeometry args={[2.3, 0.85, 0.08]} />
+        <meshStandardMaterial {...BLACK_METAL} roughness={0.38} />
       </mesh>
-      {/* spikes on top */}
-      {bars.map((b) => (
-        <mesh key={`s${b}`} position={[-side * b, 5.12, 0]}>
-          <coneGeometry args={[0.08, 0.28, 6]} />
-          <meshStandardMaterial {...IRON} />
+      <mesh position={[x(1.15), 0.5, 0.045]}>
+        <boxGeometry args={[2.05, 0.6, 0.005]} />
+        <meshStandardMaterial {...GOLD_METAL} roughness={0.35} />
+      </mesh>
+      <mesh position={[x(1.15), 0.5, 0.05]}>
+        <boxGeometry args={[1.97, 0.52, 0.005]} />
+        <meshStandardMaterial {...BLACK_METAL} />
+      </mesh>
+      {/* medallion */}
+      <group position={[x(1.15), 2.65, 0.09]} rotation-x={Math.PI / 2}>
+        <mesh>
+          <torusGeometry args={[0.4, 0.055, 14, 48]} />
+          <meshStandardMaterial {...GOLD_METAL} />
         </mesh>
+        <mesh>
+          <cylinderGeometry args={[0.36, 0.36, 0.04, 48]} />
+          <meshStandardMaterial {...BLACK_METAL} />
+        </mesh>
+        <mesh position={[0, 0.03, 0]} rotation-y={Math.PI / 4}>
+          <boxGeometry args={[0.24, 0.03, 0.24]} />
+          <meshStandardMaterial {...CHAMPAGNE} />
+        </mesh>
+      </group>
+      {/* hinge straps with rivets */}
+      {[0.95, 2.65, 4.35].map((y) => (
+        <group key={`h${y}`} position={[x(0.3), y, 0.085]}>
+          <mesh>
+            <boxGeometry args={[0.55, 0.11, 0.03]} />
+            <meshStandardMaterial {...BLACK_METAL} />
+          </mesh>
+          {[-0.18, 0, 0.18].map((r) => (
+            <mesh key={r} position={[r, 0, 0.02]}>
+              <sphereGeometry args={[0.022, 8, 8]} />
+              <meshStandardMaterial {...GOLD_METAL} />
+            </mesh>
+          ))}
+        </group>
       ))}
     </group>
   );
@@ -165,34 +235,65 @@ function Gate({ progress }: { progress: Prog }) {
   const right = useRef<THREE.Group>(null);
   const light = useRef<THREE.PointLight>(null);
   const portal = useRef<THREE.Mesh>(null);
-  const glow = useMemo(() => makeGlowTexture("rgba(255,236,190,1)", "rgba(255,170,60,0)"), []);
+  const glow = useMemo(() => makeGlowTexture("rgba(255,240,205,1)", "rgba(212,175,55,0)"), []);
+  const sign = useMemo(() => makeTextTexture("DUNGEON", { color: "#F5D98B", font: "bold 150px Anton, Impact, sans-serif" }), []);
   const open = useRef(0);
+  const vel = useRef(0);
 
-  useFrame((_, dt) => {
+  useFrame((_, rawDt) => {
+    const dt = Math.min(rawDt, 1 / 20);
     const target = smoothstep(0.08, 0.62, progress.current);
-    open.current = lerp(open.current, target, 1 - Math.exp(-dt * 5));
-    const a = open.current * 1.75;
+    // heavy gate on hinges: spring-damper (inertia + a tiny settle) instead of a linear follow
+    const k = 26;
+    const c = 9;
+    vel.current += ((target - open.current) * k - vel.current * c) * dt;
+    open.current += vel.current * dt;
+    const a = Math.max(0, open.current) * 1.75;
     if (left.current) left.current.rotation.y = a;
     if (right.current) right.current.rotation.y = -a;
     if (light.current) light.current.intensity = 4 + open.current * 60;
     if (portal.current) {
       const m = portal.current.material as THREE.MeshBasicMaterial;
-      m.opacity = 0.25 + open.current * 0.75;
+      m.opacity = 0.2 + open.current * 0.8;
     }
   });
 
   return (
     <group position={[0, 0, GATE_Z]}>
-      {/* frame */}
+      {/* frame: black posts with gold capitals and bases */}
       {[-2.55, 2.55].map((x) => (
-        <mesh key={x} position={[x, 2.8, 0]}>
-          <boxGeometry args={[0.4, 5.6, 0.5]} />
-          <meshStandardMaterial {...IRON} color="#1f1b18" />
-        </mesh>
+        <group key={x}>
+          <mesh position={[x, 2.8, 0]}>
+            <boxGeometry args={[0.4, 5.6, 0.5]} />
+            <meshStandardMaterial {...BLACK_METAL} />
+          </mesh>
+          {[0.12, 5.3].map((y) => (
+            <mesh key={y} position={[x, y, 0]}>
+              <boxGeometry args={[0.5, 0.18, 0.6]} />
+              <meshStandardMaterial {...GOLD_METAL} />
+            </mesh>
+          ))}
+          {/* hinge knuckles on the frame */}
+          {[0.95, 2.65, 4.35].map((y) => (
+            <mesh key={`k${y}`} position={[x * 0.93, y, 0.12]}>
+              <cylinderGeometry args={[0.075, 0.075, 0.34, 16]} />
+              <meshStandardMaterial {...GOLD_METAL} roughness={0.3} />
+            </mesh>
+          ))}
+        </group>
       ))}
       <mesh position={[0, 5.55, 0]}>
         <boxGeometry args={[5.5, 0.4, 0.5]} />
-        <meshStandardMaterial {...IRON} color="#1f1b18" />
+        <meshStandardMaterial {...BLACK_METAL} />
+      </mesh>
+      <mesh position={[0, 5.55, 0.26]}>
+        <boxGeometry args={[5.3, 0.04, 0.01]} />
+        <meshStandardMaterial {...GOLD_METAL} />
+      </mesh>
+      {/* gold DUNGEON sign above the gate */}
+      <mesh position={[0, 6.35, 0.13]}>
+        <planeGeometry args={[4.4, 1.1]} />
+        <meshBasicMaterial map={sign} transparent toneMapped={false} />
       </mesh>
       {/* wall around the gate */}
       {[-3.4, 3.4].map((x) => (
@@ -217,12 +318,12 @@ function Gate({ progress }: { progress: Prog }) {
       {/* light behind the gate */}
       <mesh ref={portal} position={[0, 2.8, -2.5]}>
         <planeGeometry args={[9, 7]} />
-        <meshBasicMaterial color="#ffdca0" transparent opacity={0.3} toneMapped={false} />
+        <meshBasicMaterial color="#F5D98B" transparent opacity={0.3} toneMapped={false} />
       </mesh>
       <sprite position={[0, 2.6, -1.5]} scale={[14, 10, 1]}>
-        <spriteMaterial map={glow} blending={THREE.AdditiveBlending} depthWrite={false} opacity={0.55} />
+        <spriteMaterial map={glow} blending={THREE.AdditiveBlending} depthWrite={false} opacity={0.5} />
       </sprite>
-      <pointLight ref={light} position={[0, 3, -1.2]} color="#ffc070" distance={30} decay={1.3} intensity={4} />
+      <pointLight ref={light} position={[0, 3, -1.2]} color="#f5c870" distance={30} decay={1.3} intensity={4} />
     </group>
   );
 }
@@ -282,7 +383,8 @@ function CameraRig({ progress }: { progress: Prog }) {
   const smooth = useRef(0);
   const look = useMemo(() => new THREE.Vector3(), []);
 
-  useFrame((state, dt) => {
+  useFrame((state, rawDt) => {
+    const dt = Math.min(rawDt, 1 / 20); // the scene may resume after being paused: avoid a jump
     intro.current = Math.min(1, intro.current + dt * 0.35);
     const introEase = 1 - Math.pow(1 - intro.current, 3);
     smooth.current = lerp(smooth.current, progress.current, 1 - Math.exp(-dt * 4));
@@ -314,6 +416,12 @@ export default function GateScene({ progress, active = true }: { progress: Prog;
       <hemisphereLight args={["#3a2a1a", "#000000", 0.25]} />
       <Corridor />
       <Torches />
+      {/* warm reflections so the black metal and gold read as real metal */}
+      <Environment resolution={128} frames={1} environmentIntensity={0.35}>
+        <Lightformer form="rect" intensity={2.5} color="#F5D98B" position={[0, 3, -12]} scale={[8, 6, 1]} />
+        <Lightformer form="rect" intensity={1.2} color="#D4AF37" position={[-6, 4, 0]} rotation-y={Math.PI / 2} scale={[10, 3, 1]} />
+        <Lightformer form="rect" intensity={1.2} color="#D4AF37" position={[6, 4, 0]} rotation-y={-Math.PI / 2} scale={[10, 3, 1]} />
+      </Environment>
       <Gate progress={progress} />
       <Embers />
       <CameraRig progress={progress} />

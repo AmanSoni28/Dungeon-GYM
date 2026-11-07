@@ -9,7 +9,7 @@ const STATUS = ["Heating the forge", "Loading the iron", "Lighting the torches",
 
 /** "The Forge": logo fills with molten gold 0→100, a crack of light splits the screen open. */
 export function Preloader() {
-  const { setLoaded } = useApp();
+  const { setPreloaded } = useApp();
   const root = useRef<HTMLDivElement>(null);
   const [count, setCount] = useState(0);
   const [done, setDone] = useState(false);
@@ -21,7 +21,7 @@ export function Preloader() {
       const tl = gsap.timeline();
       tl.to(obj, {
         v: 100,
-        duration: reduce ? 0.2 : 2.8,
+        duration: reduce ? 0.2 : 2.2,
         ease: "power2.inOut",
         onUpdate: () => setCount(Math.round(obj.v)),
       })
@@ -30,11 +30,11 @@ export function Preloader() {
         .to(".pl__crack", { scaleY: 6, opacity: 0, duration: 0.6, ease: "power2.out" })
         .to(".pl__half--top", { yPercent: -101, duration: 1.2, ease: "power4.inOut" }, "<")
         .to(".pl__half--bottom", { yPercent: 101, duration: 1.2, ease: "power4.inOut" }, "<")
-        .add(() => setLoaded(true), "<0.25")
+        .add(() => setPreloaded(true), "<0.25") // hands over to the cinematic intro
         .add(() => setDone(true));
     }, root);
     return () => ctx.revert();
-  }, [setLoaded]);
+  }, [setPreloaded]);
 
   if (done) return null;
   const status = STATUS[Math.min(STATUS.length - 1, Math.floor(count / 26))];

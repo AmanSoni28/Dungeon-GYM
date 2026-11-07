@@ -234,29 +234,55 @@
 .logo {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  color: var(--accent);
-  transition: color 0.8s;
+  line-height: 0;
 }
-.logo__mark {
-  width: 34px;
-  height: 34px;
+.logo__svg {
+  height: 46px;
+  width: auto;
+  overflow: visible;
 }
-.logo__text {
-  display: grid;
-  font-family: var(--font-display);
-  font-size: 22px;
-  line-height: 0.9;
-  letter-spacing: 0.08em;
-  color: var(--text);
-
-  small {
-    font-family: var(--font-body);
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.42em;
-    text-transform: uppercase;
-    color: var(--muted);
+.logo--badge .logo__svg {
+  height: 120px;
+}
+.logo__word {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 42px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  fill: url(#logo-gold-text);
+  stroke: #0b0a08;
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+}
+.logo__sub {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  fill: #e8c560;
+  stroke: #0b0a08;
+  stroke-width: 3px;
+  paint-order: stroke fill;
+}
+.logo__runner {
+  path {
+    fill: none;
+    stroke: #f3d77a;
+    stroke-width: 5.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  circle {
+    fill: #f3d77a;
+  }
+}
+.logo__runner--back {
+  path {
+    stroke: #c9a032;
+  }
+  circle {
+    fill: #c9a032;
   }
 }
 

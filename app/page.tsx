@@ -1,9 +1,11 @@
 import { Preloader } from "@/components/chrome/Preloader";
 import { Cursor } from "@/components/chrome/Cursor";
+import { CinematicIntro } from "@/components/intro/CinematicIntro";
 import { Navbar } from "@/components/chrome/Navbar";
 import { Marquee, ScrollProgress, WhatsAppButton } from "@/components/chrome/Extras";
 import { Hero } from "@/components/sections/Hero";
 import { Manifesto } from "@/components/sections/Manifesto";
+import { RealGym } from "@/components/sections/RealGym";
 import { Gallery } from "@/components/sections/Gallery";
 import { Tour } from "@/components/sections/Tour";
 import { Programs } from "@/components/sections/Programs";
@@ -25,6 +27,7 @@ export default function Home() {
   return (
     <>
       <Preloader />
+      <CinematicIntro />
       <Cursor />
       <ScrollProgress />
       <Navbar />
@@ -32,6 +35,7 @@ export default function Home() {
 
       <main>
         <Hero />
+        <RealGym />
         <Manifesto />
         <Gallery />
         <Marquee items={["Strength", "Discipline", "Iron", "Sweat", "Glory", "Recovery"]} />

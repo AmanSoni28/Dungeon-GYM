@@ -58,6 +58,22 @@ export const tourZones: TourZone[] = [
   { id: "spa", name: "Spa Sanctum", blurb: "Steam, sauna and a cold plunge to restore the body.", position: [6, 1.7, -6], look: -0.6 },
 ];
 
+// ── Real gym views (entrance experience). Real photos of Dungeon Gym only.
+//    • kind "photo": one wide photo, set `hfov` to the lens's real horizontal field of view.
+//    • kind "equirect": a true 360° panorama (2:1 image), enables full 360° rotation.
+//    Add more entries to let visitors switch between views.
+export const gymViews: import("@/lib/gym/look").GymView[] = [
+  {
+    id: "main-floor",
+    label: "Main training floor",
+    src: "/images/gym/main-floor.jpg",
+    kind: "photo",
+    hfov: 104, // ultra-wide phone lens (cropped)
+    aspect: 686 / 502,
+    pitch: -10, // rest the view on the training floor rather than the ceiling
+  },
+];
+
 // ── Muscle map
 export type MuscleId = "chest" | "shoulders" | "arms" | "core" | "legs" | "back";
 

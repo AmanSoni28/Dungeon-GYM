@@ -41,9 +41,10 @@ export function Hero() {
           const p = s.progress;
           progress.current = p;
           el.style.setProperty("--p", p.toFixed(4));
-          // flash of light as the camera passes through the gate
-          const flash = Math.max(0, 1 - Math.abs(p - 0.93) * 9);
-          el.style.setProperty("--flash", flash.toFixed(3));
+          // golden light floods in as the camera passes through the gate, and stays:
+          // the real-gym scene that follows starts from the same light (one continuous shot)
+          const t = Math.min(1, Math.max(0, (p - 0.8) / 0.17));
+          el.style.setProperty("--flash", (t * t * (3 - 2 * t)).toFixed(3));
         },
         onToggle: (s) => setActive(s.isActive || s.progress < 1),
       });
@@ -68,7 +69,8 @@ export function Hero() {
   return (
     <section ref={section} id="top" className="hero">
       <div className="hero__canvas">
-        <GateScene progress={progress} active={active} />
+        {/* paused behind the cinematic intro, starts when the homepage is revealed */}
+        <GateScene progress={progress} active={active && loaded} />
       </div>
       <div className="hero__vignette" />
 
@@ -76,7 +78,7 @@ export function Hero() {
         <p className="eyebrow">{brand.full} · Est. 2016</p>
         <h1 className="hero__title">
           <span className="hero__line">
-            <Letters text="ENTER THE" />
+            <Letters text="WELCOME TO" />
           </span>
           <span className="hero__line hero__line--gold">
             <Letters text="DUNGEON" />
@@ -97,7 +99,7 @@ export function Hero() {
       </div>
 
       <div className="hero__scroll" aria-hidden>
-        <span>Scroll to open the gate</span>
+        <span>Scroll to enter</span>
         <i />
       </div>
 

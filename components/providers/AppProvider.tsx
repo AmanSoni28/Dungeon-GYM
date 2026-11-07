@@ -11,11 +11,18 @@ declare global {
   }
 }
 
-type AppState = { loaded: boolean; setLoaded: (v: boolean) => void };
-const AppContext = createContext<AppState>({ loaded: false, setLoaded: () => {} });
+/** preloaded = preloader finished (cinematic intro may now play) · loaded = homepage revealed */
+type AppState = {
+  preloaded: boolean;
+  setPreloaded: (v: boolean) => void;
+  loaded: boolean;
+  setLoaded: (v: boolean) => void;
+};
+const AppContext = createContext<AppState>({ preloaded: false, setPreloaded: () => {}, loaded: false, setLoaded: () => {} });
 export const useApp = () => useContext(AppContext);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const [preloaded, setPreloaded] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   // Smooth scrolling (Lenis) driven by the GSAP ticker so ScrollTrigger stays perfectly in sync
@@ -46,5 +53,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     requestAnimationFrame(() => ScrollTrigger.refresh());
   }, [loaded]);
 
-  return <AppContext.Provider value={{ loaded, setLoaded }}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={{ preloaded, setPreloaded, loaded, setLoaded }}>{children}</AppContext.Provider>
+  );
 }

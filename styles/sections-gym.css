@@ -186,9 +186,9 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(circle at 50% 45%, oklch(0.98 0.04 90), oklch(0.85 0.12 80) 40%, oklch(0.5 0.12 60) 100%);
+  /* same gradient as .realgym__light: the next scene begins exactly where this one ends */
+  background: radial-gradient(circle at 50% 45%, #fff6dc, #f5d98b 35%, #d4af37 70%, #6b5214 100%);
   opacity: var(--flash);
-  mix-blend-mode: screen;
 }
 
 @media (max-width: 640px) {
