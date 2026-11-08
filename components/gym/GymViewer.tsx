@@ -14,7 +14,9 @@ import {
   type GymView,
 } from "@/lib/gym/look";
 import { journeyPhases, journeyVisuals, scrollYaw } from "@/lib/gym/journey";
+import { createFlyPath, flyFov, flyParam, flyRoll, FOCUS, passFraction, revealPitch } from "@/lib/gym/bench";
 import { Dust, PhotoScreen, preparePhotoTexture } from "@/components/gym/PhotoScreen";
+import { BenchPress, type BenchReveal } from "@/components/gym/BenchPress";
 
 import type { GymLookState } from "@/lib/gym/state";
 
@@ -37,11 +39,20 @@ function Screen({ view, brightness }: { view: GymView; brightness: React.Mutable
   return <PhotoScreen view={view} texture={tex} brightness={brightness} />;
 }
 
-function Rig({ view, look, autoRotate, onLook, brightness }: Omit<Props, "running" | "lite" | "onReady"> & { brightness: React.MutableRefObject<number> }) {
+type RigProps = Omit<Props, "running" | "lite" | "onReady"> & {
+  brightness: React.MutableRefObject<number>;
+  bench: React.MutableRefObject<BenchReveal>;
+};
+
+function Rig({ view, look, autoRotate, onLook, brightness, bench }: RigProps) {
   const { camera, size } = useThree();
-  const cur = useRef({ yaw: 0, pitch: 0, init: false });
+  const cur = useRef({ yaw: 0, pitch: 0, init: false, fly: 0 });
   const tracker = useMemo(() => createExploreTracker(), []);
-  const dir = useMemo(() => new THREE.Vector3(), []);
+  const path = useMemo(() => {
+    const curve = createFlyPath();
+    return { curve, pass: passFraction(curve) };
+  }, []);
+  const v = useMemo(() => ({ pos: new THREE.Vector3(), ahead: new THREE.Vector3(), look: new THREE.Vector3() }), []);
 
   useFrame(({ clock }, rawDt) => {
     const dt = Math.min(rawDt, 1 / 20);
@@ -66,26 +77,50 @@ function Rig({ view, look, autoRotate, onLook, brightness }: Omit<Props, "runnin
     s.dragPitch = want.pitch - basePitch;
 
     if (!cur.current.init) {
-      cur.current = { yaw: want.yaw, pitch: want.pitch, init: true };
+      cur.current = { yaw: want.yaw, pitch: want.pitch, init: true, fly: 0 };
     }
     cur.current.yaw = damp(cur.current.yaw, want.yaw, 5, dt);
     cur.current.pitch = damp(cur.current.pitch, want.pitch, 5, dt);
 
+    // the 360° ends facing the bench: ease the view onto the athlete (whatever the visitor dragged to)
+    const rv = vis.reveal;
+    const yawHome = Math.round(cur.current.yaw / (Math.PI * 2)) * Math.PI * 2;
+    const yaw = cur.current.yaw + (yawHome - cur.current.yaw) * rv;
+    const pitch = cur.current.pitch + (revealPitch() - cur.current.pitch) * rv;
+
     // subtle hand-held breathing for realism
     const t = clock.elapsedTime;
-    const sway = (1 - ph.exit) * 0.004;
-    cam.rotation.set(cur.current.pitch + Math.sin(t * 0.7) * sway, cur.current.yaw + Math.sin(t * 0.43) * sway, 0, "YXZ");
+    const sway = 0.004 * (1 - rv);
+    cam.rotation.set(pitch + Math.sin(t * 0.7) * sway, yaw + Math.sin(t * 0.43) * sway, 0, "YXZ");
+    cam.position.set(0, 0, 0);
+    let fov = (baseFov / DEG) * vis.fovScale;
 
-    // dolly forward along the view direction on exit
-    dir.set(0, 0, -1).applyEuler(cam.rotation);
-    cam.position.copy(dir.multiplyScalar(vis.dolly));
-
-    const fov = (baseFov / DEG) * vis.fovScale;
+    // fly-through: dive over the bench, thread the gap between chest and bar, out past the head
+    cur.current.fly = damp(cur.current.fly, ph.fly, 7, dt);
+    const f = cur.current.fly;
+    if (f > 1e-4) {
+      const startFov = (baseFov / DEG) * 0.7; // where the reveal's zoom left off
+      const u = flyParam(f, path.pass);
+      path.curve.getPointAt(u, v.pos);
+      path.curve.getPointAt(Math.min(1, u + 0.06), v.ahead);
+      if (u > 0.94) v.ahead.add(v.ahead.clone().sub(v.pos).setLength(0.5));
+      // start by looking where the reveal framed (the chest), then look along the flight
+      const follow = Math.min(1, u / 0.18);
+      const fw = follow * follow * (3 - 2 * follow);
+      v.look.copy(FOCUS).lerp(v.ahead, fw);
+      cam.position.copy(v.pos);
+      cam.up.set(0, 1, 0);
+      cam.lookAt(v.look);
+      cam.rotateZ(flyRoll(u, path.pass));
+      fov = flyFov(u, path.pass, startFov);
+    }
     if (Math.abs(cam.fov - fov) > 0.01) {
       cam.fov = fov;
       cam.updateProjectionMatrix();
     }
-    brightness.current = 1 - vis.fade * 0.85;
+    brightness.current = vis.gym;
+    bench.current.amount = rv;
+    bench.current.fly = f;
 
     const pos = viewPosition(cur.current.yaw, limits);
     // only count what the visitor has actually seen (the viewer pre-mounts before it is visible)
@@ -103,6 +138,7 @@ function Ready({ onReady }: { onReady?: () => void }) {
 
 export default function GymViewer({ view, look, running, lite, autoRotate, onLook, onReady }: Props) {
   const brightness = useRef(1);
+  const bench = useRef<BenchReveal>({ amount: 0, fly: 0 });
   return (
     <Canvas
       dpr={lite ? 1 : [1, 1.5]}
@@ -117,7 +153,8 @@ export default function GymViewer({ view, look, running, lite, autoRotate, onLoo
         <Ready onReady={onReady} />
       </Suspense>
       <Dust count={lite ? 70 : 220} />
-      <Rig view={view} look={look} autoRotate={autoRotate} onLook={onLook} brightness={brightness} />
+      <BenchPress reveal={bench} />
+      <Rig view={view} look={look} autoRotate={autoRotate} onLook={onLook} brightness={brightness} bench={bench} />
     </Canvas>
   );
 }

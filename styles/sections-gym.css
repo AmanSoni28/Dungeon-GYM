@@ -426,6 +426,33 @@
     var(--ink);
 }
 
+.manifesto {
+  --mx: 50;
+  --my: 35;
+
+  .eyebrow {
+    --eb-line: 1;
+    &::before {
+      transform: scaleX(var(--eb-line));
+      transform-origin: left;
+    }
+  }
+}
+
+/* ember spotlight that trails the cursor */
+.manifesto__glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    600px circle at calc(var(--mx) * 1%) calc(var(--my) * 1%),
+    color-mix(in oklch, var(--ember) 16%, transparent),
+    color-mix(in oklch, var(--gold) 6%, transparent) 40%,
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+}
+
 .manifesto__text {
   margin-top: 30px;
   font-family: var(--font-display);
@@ -435,31 +462,84 @@
   text-wrap: balance;
 
   .mword {
-    transition: color 0.4s;
+    display: inline-block;
+    perspective: 700px;
+  }
+  .mword__inner {
+    display: inline-block;
+    transform-origin: 50% 100%;
+    backface-visibility: hidden;
+    will-change: transform, filter, opacity;
+  }
+
+  /* molten gold: a bright band sweeps across the letters */
+  .mword.is-gold .mword__inner {
+    color: var(--gold);
+    background: linear-gradient(
+      105deg,
+      var(--gold-deep) 0%,
+      var(--gold) 35%,
+      oklch(0.97 0.06 90) 50%,
+      var(--gold) 65%,
+      var(--gold-deep) 100%
+    );
+    background-size: 300% 100%;
+    background-position: var(--sheen) 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
   .mword.is-gold {
-    color: var(--gold);
-    text-shadow: 0 0 40px color-mix(in oklch, var(--ember) 40%, transparent);
+    --sheen: -60%;
+    --glow: 1;
+    /* glow lives on the wrapper so it isn't fighting the animated blur */
+    filter: drop-shadow(0 0 calc(28px * var(--glow)) color-mix(in oklch, var(--ember) 45%, transparent));
   }
 }
 
 .stats {
+  position: relative;
   margin-top: clamp(60px, 9vw, 120px);
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  border-top: 1px solid var(--line);
+}
+.stats__rule {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, var(--gold) 0%, var(--line) 30%, var(--line) 100%);
+  transform-origin: left;
 }
 
 .stat {
+  --divider: 1;
+  position: relative;
   display: grid;
   gap: 6px;
   padding: 34px 24px 0;
-  border-left: 1px solid var(--line);
 
-  &:first-child {
-    border-left: 0;
-    padding-left: 0;
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, var(--line), transparent);
+    transform: scaleY(var(--divider));
+    transform-origin: top;
   }
+
+  &:first-of-type {
+    padding-left: 0;
+    &::before {
+      display: none;
+    }
+  }
+}
+.stat__clip {
+  overflow: clip;
+  overflow-clip-margin: 8px;
 }
 
 .stat__value {
@@ -467,12 +547,15 @@
   font-size: clamp(54px, 7vw, 110px);
   line-height: 1;
   color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
 .stat__suffix {
+  display: inline-block;
   color: var(--gold);
   font-size: 0.55em;
 }
 .stat__label {
+  display: block;
   font-size: 12px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
@@ -483,9 +566,11 @@
   .stats {
     grid-template-columns: 1fr 1fr;
   }
-  .stat:nth-child(3) {
-    border-left: 0;
+  .stat:nth-child(odd of .stat) {
     padding-left: 0;
+    &::before {
+      display: none;
+    }
   }
 }
 

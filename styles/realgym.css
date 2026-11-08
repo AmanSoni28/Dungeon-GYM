@@ -17,6 +17,9 @@
   --prompt: 0;
   --stage-filter: blur(6px);
   --fade: 0;
+  --caption: 0;
+  --rush: 0;
+  --reveal: 0;
   --rg-black: #050505;
   --rg-black-2: #111111;
   --rg-gold: #d4af37;
@@ -276,6 +279,93 @@
   }
 }
 
+/* ── Bench-press finale ── */
+/* cinematic letterbox closes in as the spotlight comes up */
+.realgym__stage::before,
+.realgym__stage::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  height: 8vh;
+  background: var(--rg-black);
+  pointer-events: none;
+  transform: scaleY(var(--reveal));
+}
+.realgym__stage::before {
+  top: 0;
+  transform-origin: top;
+}
+.realgym__stage::after {
+  bottom: 0;
+  transform-origin: bottom;
+}
+
+.realgym__caption {
+  position: absolute;
+  left: var(--gutter);
+  top: 50%;
+  display: grid;
+  gap: 14px;
+  max-width: min(440px, 80vw);
+  pointer-events: none;
+  opacity: var(--caption);
+  translate: calc((1 - var(--caption)) * -28px) -50%;
+  filter: blur(calc((1 - var(--caption)) * 10px));
+  text-shadow: 0 4px 30px rgb(0 0 0 / 0.85);
+}
+.realgym__chapter {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--rg-champagne);
+
+  i {
+    width: calc(var(--caption) * 46px);
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--rg-gold));
+  }
+}
+.realgym__line {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(44px, 6.4vw, 96px);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: 0.02em;
+  color: #f4efe4;
+
+  em {
+    font-style: italic;
+    background: linear-gradient(176deg, #fff6d6 8%, var(--rg-champagne) 32%, var(--rg-gold) 60%, #8a6a1c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+.realgym__sub {
+  font-size: 12px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #bdb5a4;
+}
+
+/* speed rush while the bar flies overhead: the frame edges darken and warm */
+.realgym__rush {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--rush);
+  background:
+    radial-gradient(ellipse at 50% 50%, transparent 38%, rgb(5 5 5 / 0.85) 100%),
+    radial-gradient(ellipse at 50% 50%, transparent 55%, rgb(212 175 55 / 0.18) 80%, transparent 100%);
+}
+
 /* ── no-WebGL fallback ── */
 .gymfb {
   position: absolute;
@@ -294,6 +384,11 @@
 }
 
 @media (max-width: 640px) {
+  .realgym__caption {
+    top: auto;
+    bottom: 14vh;
+    translate: 0 calc((1 - var(--caption)) * 20px);
+  }
   .realgym__meter {
     right: calc(var(--gutter) + 72px); /* clear of the WhatsApp button */
     width: auto;
