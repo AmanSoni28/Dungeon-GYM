@@ -6,7 +6,7 @@ import * as THREE from "three";
 import { Environment, Lightformer, MeshReflectorMaterial } from "@react-three/drei";
 import { makeGlowTexture, makeStoneTexture, makeTextTexture } from "./textures";
 import { lerp, rand, smoothstep } from "@/lib/utils";
-import { cameraFov, cameraPush, CAMERA_PUSH_Z, createSmashClock, doorOpen, SMASH_T, trackWeight, type SmashClock } from "@/lib/gate/smash";
+import { cameraFov, cameraPush, CAMERA_PUSH_Z, createSmashClock, doorOpen, SCRUB, SMASH_T, trackWeight, type SmashClock } from "@/lib/gate/smash";
 import { shakeOffset } from "@/lib/intro/shake";
 import { Atmosphere, Dumbbell, ImpactFX, SmashDirector } from "./gate/SmashFX";
 import { PostFX } from "./gate/PostFX";
@@ -321,8 +321,9 @@ function Gate({ progress, smash }: { progress: Prog; smash: Smash }) {
   useFrame((state, rawDt) => {
     const dt = Math.min(rawDt, 1 / 20);
     const time = state.clock.elapsedTime;
-    const target = smoothstep(0.08, 0.62, progress.current);
     const sc = smash.current;
+    // classic mode: scroll swings the doors; in the smash, only the dumbbell opens them
+    const target = sc.t >= 0 ? 0 : smoothstep(0.08, 0.62, progress.current);
     // heavy gate on hinges: spring-damper (inertia + a tiny settle) instead of a linear follow
     const k = 26;
     const c = 9;
@@ -492,9 +493,12 @@ function CameraRig({ progress, smash }: { progress: Prog; smash: Smash }) {
     const introEase = 1 - Math.pow(1 - intro.current, 3);
     smooth.current = lerp(smooth.current, progress.current, 1 - Math.exp(-dt * 4));
     const p = smooth.current;
-    const travel = smoothstep(0.05, 1, p);
-
     const c = smash.current;
+    // scroll-scrubbed smash: the camera only walks in once the doors are (nearly) open
+    const travel = c.scrub
+      ? smoothstep(SCRUB.share + 0.03, 1, p) * smoothstep(0.5, 1, doorOpen(Math.max(0, c.t)))
+      : smoothstep(0.05, 1, p);
+
     // smash: a slow, suspenseful push toward the gate before the throw (kept once it has played)
     const push = c.t >= 0 ? cameraPush(c.t) : 0;
     const base = lerp(lerp(14, 9, introEase), CAMERA_PUSH_Z, push);

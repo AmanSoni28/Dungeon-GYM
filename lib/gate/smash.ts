@@ -6,7 +6,9 @@
 //   flight:   a heavy dumbbell flies in from the foreground, spinning, and hits the centre of the gate
 //   impact:   sparks, flash, shake; the doors are punched in and wobble against the latch
 //   opening:  the latch gives, both doors swing open on their hinges, golden light floods out
-//   hold:     doors settle open; then the page carries the visitor through into the gym
+//   hold:     doors settle open; scrolling on carries the visitor through into the gym
+//
+// The whole shot is scrubbed by the visitor's scroll (see SCRUB); scrolling back rewinds it.
 
 export const SMASH_T = {
   throw: 1.5,
@@ -208,55 +210,63 @@ export function trackWeight(t: number) {
   return inn * out;
 }
 
-// ── Lifecycle (overlay controls) ──
-export type SmashStatus = "pending" | "playing" | "done";
-export type SmashState = { status: SmashStatus; skipped: boolean; run: number };
-export type SmashEvent = { type: "START" } | { type: "FINISH" } | { type: "SKIP" } | { type: "REPLAY" } | { type: "BYPASS" };
+// ── Scroll-driven playback ──
+// The visitor drives the shot with the scroll wheel: the first part of the pinned hero scrubs the
+// sequence (dumbbell → impact → doors), the rest carries the camera through the open gate.
+export const SCRUB = {
+  /** fraction of the hero's pinned scroll that plays the smash */
+  share: 0.5,
+  /** fastest the clock may run, in sequence-seconds per second (scaled by bullet time) */
+  maxSpeed: 2.4,
+  /** how quickly the clock catches up with the scroll position (1/s) */
+  follow: 7,
+};
 
-export const initialSmashState: SmashState = { status: "pending", skipped: false, run: 0 };
-
-export function smashReducer(s: SmashState, e: SmashEvent): SmashState {
-  switch (e.type) {
-    case "START":
-      return s.status === "pending" ? { status: "playing", skipped: false, run: s.run + 1 } : s;
-    case "FINISH":
-      return s.status === "playing" ? { ...s, status: "done" } : s;
-    case "SKIP":
-      return s.status === "playing" ? { ...s, status: "done", skipped: true } : s;
-    case "REPLAY":
-      return s.status === "done" ? { status: "playing", skipped: false, run: s.run + 1 } : s;
-    case "BYPASS": // already seen this visit, or reduced motion: no sequence, scroll opens the gate as before
-      return s.status === "pending" ? { ...s, status: "done" } : s;
-    default:
-      return s;
-  }
+/** how much scroll each second of the sequence gets: slow motion takes more scroll, like the timed cut */
+function scrollWeight(t: number) {
+  if (t < SMASH_T.throw) return 0.85;
+  if (t >= SMASH_T.openEnd) return 0.6;
+  return 1 / timeScale(t);
 }
 
-// ── Once per visit ──
-export const SEEN_KEY = "dungeon:gate-smash-seen";
-
-export function hasSeenSmash(store: Pick<Storage, "getItem"> | null | undefined = safeSession()) {
-  try {
-    return store?.getItem(SEEN_KEY) === "1";
-  } catch {
-    return false;
-  }
+const WARP_N = 600;
+let warp: Float64Array | null = null;
+function warpTable() {
+  if (warp) return warp;
+  warp = new Float64Array(WARP_N + 1);
+  const h = SMASH_T.end / WARP_N;
+  for (let i = 1; i <= WARP_N; i++) warp[i] = warp[i - 1] + scrollWeight((i - 0.5) * h) * h;
+  return warp;
 }
 
-export function markSmashSeen(store: Pick<Storage, "setItem"> | null | undefined = safeSession()) {
-  try {
-    store?.setItem(SEEN_KEY, "1");
-  } catch {
-    /* private mode / blocked storage: just replay next time */
+/** Sequence time (s) for a hero scroll progress p (0..1). Monotonic, 0 at the top, SMASH_T.end at SCRUB.share. */
+export function scrollToSmashTime(p: number) {
+  const tab = warpTable();
+  const goal = clamp01(p / SCRUB.share) * tab[WARP_N];
+  let lo = 0;
+  let hi = WARP_N;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (tab[mid] < goal) lo = mid;
+    else hi = mid;
   }
+  const span = tab[hi] - tab[lo];
+  const f = span > 0 ? (goal - tab[lo]) / span : 0;
+  return Math.min(SMASH_T.end, ((lo + clamp01(f)) / WARP_N) * SMASH_T.end);
 }
 
-function safeSession(): Storage | null {
-  try {
-    return typeof window === "undefined" ? null : window.sessionStorage;
-  } catch {
-    return null;
-  }
+/**
+ * One frame of the scroll-scrubbed clock: chase the scroll position smoothly, but never faster
+ * than the cinematic allows (bullet time and the hit-stop survive even a hard flick of the wheel).
+ */
+export function scrubStep(t: number, goal: number, dt: number): { t: number; scale: number } {
+  const d = goal - t;
+  if (Math.abs(d) < 1e-4) return { t: goal, scale: 1 };
+  let step = d * (1 - Math.exp(-dt * SCRUB.follow));
+  if (step > 0) step = Math.min(step, dt * SCRUB.maxSpeed * timeScale(t));
+  else step = Math.max(step, -dt * SCRUB.maxSpeed * 2);
+  const next = t + step;
+  return { t: next, scale: step > 0 ? timeScale(next) : 1 };
 }
 
 // ── Shared clock between the page overlay (Hero) and the 3D scene ──
@@ -274,12 +284,24 @@ export type SmashClock = {
   scale: number;
   /** dev freeze-frame: hold every effect still */
   frozen?: boolean;
+  /** scroll-driven: the clock chases `goal` (set from the scroll position) instead of running on its own */
+  scrub: boolean;
+  goal: number;
   /** live dumbbell position, for camera tracking */
   target: { x: number; y: number; z: number };
   onBeat?: (beat: SmashBeat) => void;
 };
 
-export const createSmashClock = (): SmashClock => ({ t: -1, running: false, run: 0, trauma: 0, scale: 1, target: { x: 0, y: 0, z: 0 } });
+export const createSmashClock = (): SmashClock => ({
+  t: -1,
+  running: false,
+  run: 0,
+  trauma: 0,
+  scale: 1,
+  scrub: false,
+  goal: 0,
+  target: { x: 0, y: 0, z: 0 },
+});
 
 const BEATS: [SmashBeat, number][] = [
   ["throw", SMASH_T.throw],

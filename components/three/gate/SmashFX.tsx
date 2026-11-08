@@ -16,6 +16,7 @@ import {
   reboundBody,
   SMASH_T,
   stepBody,
+  scrubStep,
   timeScale,
   type Body,
   type SmashClock,
@@ -34,6 +35,23 @@ export function SmashDirector({ clock }: { clock: Clock }) {
   useFrame((_, raw) => {
     const c = clock.current;
     const dt = Math.min(raw, 1 / 20);
+    if (c.scrub && !c.frozen) {
+      // scroll-driven: chase the visitor's scroll position (forward plays, back rewinds)
+      const prev = c.t;
+      const next = scrubStep(prev, c.goal, dt);
+      c.t = next.t;
+      c.scale = next.scale;
+      if (c.t > prev) {
+        for (const beat of beatsCrossed(prev, c.t)) {
+          if (beat === "impact") c.trauma = Math.min(1, c.trauma + 0.95);
+          c.onBeat?.(beat);
+        }
+      } else if (prev >= SMASH_T.impact && c.t < SMASH_T.impact) {
+        c.run++; // rewound past the impact: every effect re-arms for the next hit
+      }
+      c.trauma = decayTrauma(c.trauma, dt, 1.5);
+      return;
+    }
     c.scale = c.running ? timeScale(c.t) : c.frozen ? 0 : 1;
     if (c.running) {
       const prev = c.t;
@@ -147,6 +165,8 @@ export function Dumbbell({ clock, lite }: { clock: Clock; lite: boolean }) {
     }
 
     const t = c.t;
+    // scrubbed backwards: the rebound is re-simulated from the impact
+    if (s.body && (t < SMASH_T.impact || t < s.time - 1e-6)) s.body = null;
     const flying = t >= SMASH_T.throw && t < SMASH_T.impact;
     g.visible = t >= SMASH_T.throw;
     let heat = 0;
@@ -441,6 +461,18 @@ export function ImpactFX({ clock, lite }: { clock: Clock; lite: boolean }) {
     const ix = GATE_FACE.x;
     const iy = GATE_FACE.y;
     const iz = GATE_FACE.z + 0.15;
+
+    // scrubbed back before the hit: clear the burst so it can play again
+    if (c.t < SMASH_T.impact && fx.current.age < 99) {
+      fx.current.age = 99;
+      life.fill(0);
+      col.fill(0);
+      for (let i = 0; i < SPARKS; i++) pos[i * 3 + 1] = -50;
+      deb.forEach((d) => {
+        d.p.set(0, -50, 0);
+        d.rest = true;
+      });
+    }
 
     let pre = -1;
     if (fx.current.run !== c.run && c.t >= SMASH_T.impact) {

@@ -53,6 +53,7 @@
 /* ════════ Hero ════════ */
 .hero {
   --p: 0;
+  --pi: 0; /* 0 → 1 over the first scroll: the landing title gives way to the shot */
   --flash: 0;
   position: relative;
   height: 100svh;
@@ -84,9 +85,10 @@
   padding: 120px var(--gutter) 110px;
   text-align: center;
   pointer-events: none;
-  opacity: calc(1 - var(--p) * 3.2);
-  transform: translateY(calc(var(--p) * -80px)) scale(calc(1 + var(--p) * 0.18));
-  filter: blur(calc(var(--p) * 16px));
+  /* the title parts like smoke as the camera starts to move: lifts, swells and blurs away */
+  opacity: calc(1 - var(--pi) * 1.15);
+  transform: translateY(calc(var(--pi) * -70px)) scale(calc(1 + var(--pi) * 0.22));
+  filter: blur(calc(var(--pi) * 18px));
 
   .btn,
   a {
@@ -113,12 +115,24 @@
 }
 
 .hero__char {
+  --i: 0;
   display: inline-block;
-  background: linear-gradient(176deg, #fff6d6 8%, var(--gold-bright) 30%, var(--gold) 55%, var(--gold-deep) 82%, var(--gold) 100%);
+  /* polished gold, with a slow light sweep travelling across the letters */
+  background:
+    linear-gradient(100deg, transparent 42%, rgb(255 252 240 / 0.95) 50%, transparent 58%) no-repeat,
+    linear-gradient(176deg, #fff6d6 8%, var(--gold-bright) 30%, var(--gold) 55%, var(--gold-deep) 82%, var(--gold) 100%);
+  background-size: 320% 100%, 100% 100%;
+  background-position: 100% 0, 0 0;
+  animation: hero-sheen 7.5s var(--ease-in-out) calc(2.8s + var(--i) * 0.11s) infinite;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   filter: drop-shadow(0 6px 30px oklch(0 0 0 / 0.75)) drop-shadow(0 0 22px color-mix(in oklch, var(--gold) 22%, transparent));
+}
+
+@keyframes hero-sheen {
+  0% { background-position: 100% 0, 0 0; }
+  22%, 100% { background-position: 0% 0, 0 0; }
 }
 
 .hero__kicker {
@@ -149,7 +163,7 @@
   position: absolute;
   inset: clamp(96px, 13vh, 116px) var(--gutter) clamp(28px, 5vh, 44px);
   pointer-events: none;
-  opacity: calc(0.7 - var(--p) * 3);
+  opacity: calc(0.7 - var(--pi) * 0.9);
 
   i {
     position: absolute;
@@ -173,7 +187,7 @@
   height: 36px;
   border: 1px solid color-mix(in oklch, var(--gold) 55%, transparent);
   border-radius: 999px;
-  opacity: calc(1 - var(--p) * 5);
+  opacity: calc(1 - var(--pi) * 1.6);
 
   i {
     position: absolute;
@@ -194,9 +208,46 @@
   100% { transform: translateY(14px); opacity: 0; }
 }
 
-/* ── Dumbbell gate smash ── */
-/* wordmark, frame and scroll cue wait until the doors give way */
-.hero[data-reveal="false"] :is(.hero__content, .hero__frame, .hero__scroll) {
+/* "scroll to break the gate": a quiet invitation above the scroll capsule */
+.hero__hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(clamp(28px, 5vh, 44px) + 50px);
+  translate: -50% 0;
+  margin: 0;
+  margin-right: -0.42em;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--sand);
+  pointer-events: none;
+  opacity: calc(0.85 - var(--pi) * 1.4);
+
+  &::before,
+  &::after {
+    content: "";
+    display: inline-block;
+    vertical-align: middle;
+    width: 28px;
+    height: 1px;
+    margin-inline: 14px;
+    background: linear-gradient(90deg, transparent, var(--gold));
+  }
+  &::after {
+    background: linear-gradient(90deg, var(--gold), transparent);
+  }
+  animation: hero-hint 3.2s var(--ease-in-out) infinite;
+}
+@keyframes hero-hint {
+  0%, 100% { color: var(--sand); }
+  50% { color: var(--gold-bright); }
+}
+
+/* ── Dumbbell gate smash (scrubbed by scroll) ── */
+/* wordmark, frame and scroll cue wait until the homepage is revealed */
+.hero[data-reveal="false"] :is(.hero__content, .hero__frame, .hero__scroll, .hero__hint) {
   opacity: 0 !important;
   pointer-events: none;
 }
@@ -328,7 +379,23 @@
   opacity: var(--flash);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .hero__char,
+  .hero__hint {
+    animation: none;
+  }
+}
+
 @media (max-width: 640px) {
+  .hero__hint {
+    letter-spacing: 0.3em;
+    margin-right: -0.3em;
+    &::before,
+    &::after {
+      width: 16px;
+      margin-inline: 10px;
+    }
+  }
   .hero__word {
     letter-spacing: 0.12em;
     margin-right: -0.12em;

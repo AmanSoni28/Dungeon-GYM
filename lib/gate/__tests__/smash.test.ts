@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   beatsCrossed,
   cameraFov,
@@ -8,16 +8,14 @@ import {
   flightPose,
   GATE_FACE,
   gateLight,
-  hasSeenSmash,
   impactSpeed,
-  initialSmashState,
   LAUNCH,
-  markSmashSeen,
   reboundBody,
-  SEEN_KEY,
+  SCRUB,
+  scrollToSmashTime,
+  scrubStep,
   SMASH_T,
   smashPhase,
-  smashReducer,
   stepBody,
   timeScale,
   trackWeight,
@@ -174,69 +172,57 @@ describe("time remapping", () => {
   });
 });
 
-describe("skip / replay lifecycle", () => {
-  it("plays, finishes and replays", () => {
-    let s = smashReducer(initialSmashState, { type: "START" });
-    expect(s).toMatchObject({ status: "playing", run: 1, skipped: false });
-    s = smashReducer(s, { type: "FINISH" });
-    expect(s.status).toBe("done");
-    s = smashReducer(s, { type: "REPLAY" });
-    expect(s).toMatchObject({ status: "playing", run: 2, skipped: false });
+describe("scroll-driven playback", () => {
+  it("maps the top of the page to the closed gate and the end of its share to the open gate", () => {
+    expect(scrollToSmashTime(0)).toBe(0);
+    expect(scrollToSmashTime(SCRUB.share)).toBeCloseTo(SMASH_T.end, 3);
+    expect(scrollToSmashTime(1)).toBeCloseTo(SMASH_T.end, 3);
+    expect(scrollToSmashTime(-0.2)).toBe(0);
   });
 
-  it("skips immediately and remembers it was skipped", () => {
-    let s = smashReducer(initialSmashState, { type: "START" });
-    s = smashReducer(s, { type: "SKIP" });
-    expect(s).toMatchObject({ status: "done", skipped: true });
-    // a late FINISH from the scene cannot change anything
-    expect(smashReducer(s, { type: "FINISH" })).toBe(s);
-    // replay clears the skipped flag
-    expect(smashReducer(s, { type: "REPLAY" }).skipped).toBe(false);
+  it("is monotonic and continuous", () => {
+    let prev = 0;
+    for (let i = 1; i <= 400; i++) {
+      const t = scrollToSmashTime((i / 400) * SCRUB.share);
+      expect(t).toBeGreaterThanOrEqual(prev);
+      expect(t - prev).toBeLessThan(0.05);
+      prev = t;
+    }
   });
 
-  it("ignores events that make no sense in the current state", () => {
-    expect(smashReducer(initialSmashState, { type: "SKIP" })).toBe(initialSmashState);
-    expect(smashReducer(initialSmashState, { type: "REPLAY" })).toBe(initialSmashState);
-    expect(smashReducer(initialSmashState, { type: "FINISH" })).toBe(initialSmashState);
-    const playing = smashReducer(initialSmashState, { type: "START" });
-    expect(smashReducer(playing, { type: "START" })).toBe(playing);
-    expect(smashReducer(playing, { type: "REPLAY" })).toBe(playing);
-  });
-
-  it("bypasses straight to done (already seen / reduced motion) without counting a run", () => {
-    const s = smashReducer(initialSmashState, { type: "BYPASS" });
-    expect(s).toMatchObject({ status: "done", run: 0 });
-    // the visitor can still choose to replay it
-    expect(smashReducer(s, { type: "REPLAY" }).status).toBe("playing");
-  });
-});
-
-describe("once per visit", () => {
-  it("remembers that the sequence was seen", () => {
-    const data: Record<string, string> = {};
-    const store = {
-      getItem: (k: string) => data[k] ?? null,
-      setItem: (k: string, v: string) => {
-        data[k] = v;
-      },
+  it("spends more scroll on the slow-motion impact than on real-time flight", () => {
+    const inv = (t: number) => {
+      let lo = 0;
+      let hi = SCRUB.share;
+      for (let i = 0; i < 50; i++) {
+        const mid = (lo + hi) / 2;
+        if (scrollToSmashTime(mid) < t) lo = mid;
+        else hi = mid;
+      }
+      return lo;
     };
-    expect(hasSeenSmash(store)).toBe(false);
-    markSmashSeen(store);
-    expect(data[SEEN_KEY]).toBe("1");
-    expect(hasSeenSmash(store)).toBe(true);
+    const slow = inv(SMASH_T.impact) - inv(SMASH_T.impact - 0.1);
+    const fast = inv(SMASH_T.throw + 0.1) - inv(SMASH_T.throw);
+    expect(slow).toBeGreaterThan(fast * 2);
   });
 
-  it("never throws when storage is blocked", () => {
-    const broken = {
-      getItem: vi.fn(() => {
-        throw new Error("blocked");
-      }),
-      setItem: vi.fn(() => {
-        throw new Error("blocked");
-      }),
-    };
-    expect(hasSeenSmash(broken)).toBe(false);
-    expect(() => markSmashSeen(broken)).not.toThrow();
-    expect(hasSeenSmash(null)).toBe(false);
+  it("chases the scroll position smoothly, capped by bullet time, and rewinds", () => {
+    const dt = 1 / 60;
+    // a hard flick to the end cannot jump the clock
+    const a = scrubStep(0, SMASH_T.end, dt);
+    expect(a.t).toBeGreaterThan(0);
+    expect(a.t).toBeLessThanOrEqual(dt * SCRUB.maxSpeed + 1e-9);
+    // slower still right before impact
+    const b = scrubStep(SMASH_T.impact - 0.05, SMASH_T.end, dt);
+    expect(b.t - (SMASH_T.impact - 0.05)).toBeLessThan(a.t);
+    expect(b.scale).toBeLessThan(1);
+    // scrolling back rewinds
+    const c = scrubStep(3, 1, dt);
+    expect(c.t).toBeLessThan(3);
+    expect(c.scale).toBe(1);
+    // settles exactly on the goal
+    let t = 0;
+    for (let i = 0; i < 600; i++) t = scrubStep(t, 1.2, dt).t;
+    expect(t).toBe(1.2);
   });
 });
