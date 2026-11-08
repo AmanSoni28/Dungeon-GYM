@@ -23,7 +23,7 @@ export function journeyPhases(p: number) {
 
 /** Scroll-driven yaw: a slow sweep across the photo while exploring (left → right). */
 export function scrollYaw(explore: number, l: LookLimits) {
-  if (l.wrap) return -ease(clamp01(explore)) * Math.PI * 1.2;
+  if (l.wrap) return -ease(clamp01(explore)) * Math.PI * 2; // one full turn: the whole 360°
   const span = Math.min(l.yawMax, -l.yawMin) * 0.85;
   return span - ease(clamp01(explore)) * span * 2; // +span (left) → −span (right)
 }

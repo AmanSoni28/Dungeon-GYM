@@ -80,13 +80,13 @@
   display: grid;
   place-content: center;
   justify-items: center;
-  gap: 26px;
-  padding: var(--gutter);
+  gap: clamp(18px, 2.6vh, 30px);
+  padding: 120px var(--gutter) 110px;
   text-align: center;
   pointer-events: none;
   opacity: calc(1 - var(--p) * 3.2);
-  transform: translateY(calc(var(--p) * -140px)) scale(calc(1 + var(--p) * 0.25));
-  filter: blur(calc(var(--p) * 18px));
+  transform: translateY(calc(var(--p) * -80px)) scale(calc(1 + var(--p) * 0.18));
+  filter: blur(calc(var(--p) * 16px));
 
   .btn,
   a {
@@ -94,92 +94,229 @@
   }
 }
 
-.hero__title {
-  display: grid;
-  font-size: clamp(64px, 14vw, 240px);
-  line-height: 0.86;
-  perspective: 800px;
+/* single hairline above the wordmark */
+.hero__rule {
+  width: clamp(60px, 8vw, 120px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
 }
 
-.hero__line {
-  display: block;
-  overflow: clip;
-  padding-block: 0.04em;
-  color: var(--text);
-  text-shadow: 0 10px 60px oklch(0 0 0 / 0.8);
-}
-
-.hero__line--gold .hero__char {
-  background: linear-gradient(180deg, var(--gold-bright) 10%, var(--gold) 50%, var(--gold-deep) 95%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 0 28px color-mix(in oklch, var(--ember) 45%, transparent));
+/* the wordmark: light luxury serif, wide tracking, polished gold */
+.hero__word {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: clamp(54px, 11vw, 168px);
+  line-height: 1;
+  letter-spacing: 0.22em;
+  margin-right: -0.22em; /* optical centring: cancel the trailing letter-space */
+  white-space: nowrap;
 }
 
 .hero__char {
   display: inline-block;
-  transform-origin: 50% 100%;
-  will-change: transform;
+  background: linear-gradient(176deg, #fff6d6 8%, var(--gold-bright) 30%, var(--gold) 55%, var(--gold-deep) 82%, var(--gold) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 6px 30px oklch(0 0 0 / 0.75)) drop-shadow(0 0 22px color-mix(in oklch, var(--gold) 22%, transparent));
 }
 
-.hero__sub {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: clamp(20px, 2.4vw, 32px);
-  color: var(--sand);
-  letter-spacing: 0.02em;
-}
-
-.hero__ctas {
+.hero__kicker {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 14px;
-  margin-top: 8px;
-}
-
-.hero__meta {
-  position: absolute;
-  left: var(--gutter);
-  right: var(--gutter);
-  bottom: 34px;
-  display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
   font-size: 12px;
-  letter-spacing: 0.2em;
+  font-weight: 500;
+  letter-spacing: 0.6em;
   text-transform: uppercase;
-  color: var(--muted);
-  opacity: calc(1 - var(--p) * 4);
+  color: var(--sand);
+  margin-right: -0.6em;
+
+  i {
+    width: 5px;
+    height: 5px;
+    rotate: 45deg;
+    background: var(--gold);
+  }
 }
 
+.hero__cta {
+  margin-top: clamp(8px, 2vh, 22px);
+}
+
+/* fine gold corner brackets: a framed, gallery-like stage */
+.hero__frame {
+  position: absolute;
+  inset: clamp(96px, 13vh, 116px) var(--gutter) clamp(28px, 5vh, 44px);
+  pointer-events: none;
+  opacity: calc(0.7 - var(--p) * 3);
+
+  i {
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    border: 0 solid color-mix(in oklch, var(--gold) 70%, transparent);
+  }
+  i:nth-child(1) { top: 0; left: 0; border-width: 1px 0 0 1px; }
+  i:nth-child(2) { top: 0; right: 0; border-width: 1px 1px 0 0; }
+  i:nth-child(3) { bottom: 0; left: 0; border-width: 0 0 1px 1px; }
+  i:nth-child(4) { bottom: 0; right: 0; border-width: 0 1px 1px 0; }
+}
+
+/* minimal scroll cue: a slim capsule with a falling gold dot */
 .hero__scroll {
   position: absolute;
   left: 50%;
-  bottom: 30px;
+  bottom: clamp(28px, 5vh, 44px);
   translate: -50% 0;
-  display: grid;
-  justify-items: center;
-  gap: 12px;
-  font-size: 11px;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: var(--gold);
+  width: 22px;
+  height: 36px;
+  border: 1px solid color-mix(in oklch, var(--gold) 55%, transparent);
+  border-radius: 999px;
   opacity: calc(1 - var(--p) * 5);
 
   i {
-    width: 1px;
-    height: 54px;
-    background: linear-gradient(to bottom, var(--gold), transparent);
+    position: absolute;
+    left: 50%;
+    top: 7px;
+    width: 3px;
+    height: 7px;
+    margin-left: -1.5px;
+    border-radius: 3px;
+    background: var(--gold-bright);
     animation: scroll-hint 2s var(--ease-in-out) infinite;
-    transform-origin: top;
   }
 }
 @keyframes scroll-hint {
-  0% { transform: scaleY(0); }
-  50% { transform: scaleY(1); transform-origin: top; }
-  51% { transform-origin: bottom; }
-  100% { transform: scaleY(0); transform-origin: bottom; }
+  0% { transform: translateY(0); opacity: 0; }
+  25% { opacity: 1; }
+  80% { transform: translateY(14px); opacity: 0; }
+  100% { transform: translateY(14px); opacity: 0; }
+}
+
+/* ── Dumbbell gate smash ── */
+/* wordmark, frame and scroll cue wait until the doors give way */
+.hero[data-reveal="false"] :is(.hero__content, .hero__frame, .hero__scroll) {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+/* cinematic letterbox while the shot plays */
+.hero__bars i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 9vh;
+  background: #050505;
+  pointer-events: none;
+  transform: scaleY(0);
+  transition: transform 1.1s var(--ease-in-out);
+}
+.hero__bars i:first-child {
+  top: 0;
+  transform-origin: top;
+}
+.hero__bars i:last-child {
+  bottom: 0;
+  transform-origin: bottom;
+}
+.hero[data-smash="playing"] .hero__bars i {
+  transform: scaleY(1);
+}
+
+/* impact flash: white-hot centre bleeding into gold */
+.hero__impact {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  mix-blend-mode: screen;
+  background: radial-gradient(circle at 50% 46%, #fffaf0 0%, #f5d98b 22%, rgb(212 175 55 / 0.45) 48%, transparent 75%);
+}
+
+.hero__controls {
+  position: absolute;
+  right: calc(var(--gutter) + 92px); /* clear of the WhatsApp button */
+  bottom: clamp(22px, 4vh, 36px);
+  z-index: 3;
+  display: flex;
+  gap: 10px;
+  animation: hero-ctl-in 0.8s var(--ease-out) both;
+}
+@keyframes hero-ctl-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+.hero__ctl {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding-inline: 16px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sand);
+  background: rgb(10 9 8 / 0.55);
+  border: 1px solid color-mix(in oklch, var(--gold) 35%, transparent);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: border-color 0.3s, color 0.3s, background 0.3s;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--gold-bright);
+    border-color: var(--gold);
+    background: rgb(10 9 8 / 0.8);
+  }
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.hero__eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+
+  i {
+    width: 2px;
+    height: 4px;
+    background: currentColor;
+    border-radius: 1px;
+  }
+  &.is-on i {
+    animation: hero-eq 0.9s ease-in-out infinite alternate;
+  }
+  &.is-on i:nth-child(2) { animation-delay: -0.3s; }
+  &.is-on i:nth-child(3) { animation-delay: -0.6s; }
+}
+@keyframes hero-eq {
+  to { height: 12px; }
+}
+
+.hero__loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.hero__spinner {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in oklch, var(--gold) 20%, transparent);
+  border-top-color: var(--gold);
+  animation: hero-spin 1s linear infinite;
+}
+@keyframes hero-spin {
+  to { rotate: 360deg; }
 }
 
 .hero__flash {
@@ -192,11 +329,26 @@
 }
 
 @media (max-width: 640px) {
-  .hero__meta span:last-child {
-    display: none;
+  .hero__word {
+    letter-spacing: 0.12em;
+    margin-right: -0.12em;
   }
-  .hero__scroll {
-    display: none;
+  .hero__kicker {
+    font-size: 11px;
+    letter-spacing: 0.45em;
+  }
+  .hero__frame i {
+    width: 22px;
+    height: 22px;
+  }
+  .hero__controls {
+    left: var(--gutter);
+    right: auto;
+  }
+  .hero__ctl {
+    height: 34px;
+    padding-inline: 12px;
+    letter-spacing: 0.16em;
   }
 }
 

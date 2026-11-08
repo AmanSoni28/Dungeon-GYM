@@ -17,6 +17,10 @@ export type GymView = {
   aspect: number;
   /** resting tilt in degrees (negative = look down toward the floor); clamped to what the photo shows */
   pitch?: number;
+  /** equirect only: camera vertical FOV in degrees (default 55) */
+  fov?: number;
+  /** equirect only: how far the camera may tilt up/down, degrees (default: nearly to the poles) */
+  maxPitch?: number;
 };
 
 export type LookLimits = {
@@ -56,7 +60,7 @@ export function verticalFovFor(hfov: number, aspect: number) {
  * at most `preferred`, and small enough that the view fits inside the photo with headroom to look around.
  */
 export function fitCameraFov(view: GymView, aspect: number, preferred = 55 * DEG, lookRoom = 0.78) {
-  if (view.kind === "equirect") return preferred;
+  if (view.kind === "equirect") return view.fov ? view.fov * DEG : preferred;
   const maxV = photoVerticalCoverage(view) * lookRoom;
   const maxVFromH = verticalFovFor(view.hfov * DEG * lookRoom, aspect);
   return Math.min(preferred, maxV, maxVFromH);
@@ -65,7 +69,8 @@ export function fitCameraFov(view: GymView, aspect: number, preferred = 55 * DEG
 /** How far the camera may turn without revealing anything outside the photo. */
 export function lookLimits(view: GymView, cameraVFov: number, aspect: number, margin = 1.5 * DEG): LookLimits {
   if (view.kind === "equirect") {
-    const p = Math.min(1.25, Math.PI / 2 - cameraVFov / 2 - 0.05);
+    let p = Math.min(1.25, Math.PI / 2 - cameraVFov / 2 - 0.05);
+    if (view.maxPitch !== undefined) p = Math.min(p, view.maxPitch * DEG);
     return { wrap: true, yawMin: -Infinity, yawMax: Infinity, pitchMin: -p, pitchMax: p };
   }
   const halfH = (view.hfov * DEG) / 2;

@@ -64,6 +64,18 @@ export const tourZones: TourZone[] = [
 //    Add more entries to let visitors switch between views.
 export const gymViews: import("@/lib/gym/look").GymView[] = [
   {
+    // full 360°: the four tour-zone photos stitched into one panorama (scripted, blended seams).
+    // Swap in a real 2:1 360° photo here any time (keep kind "equirect").
+    id: "panorama",
+    label: "360° gym floor",
+    src: "/images/gym/gym-360.jpg",
+    kind: "equirect",
+    hfov: 360,
+    aspect: 2,
+    fov: 46,
+    maxPitch: 9,
+  },
+  {
     id: "main-floor",
     label: "Main training floor",
     src: "/images/gym/main-floor.jpg",
@@ -71,6 +83,78 @@ export const gymViews: import("@/lib/gym/look").GymView[] = [
     hfov: 104, // ultra-wide phone lens (cropped)
     aspect: 686 / 502,
     pitch: -10, // rest the view on the training floor rather than the ceiling
+  },
+];
+
+// ── Virtual tour: one wide photo per zone (or a 2:1 360° panorama with kind "equirect").
+//    hfov = horizontal angle the photo really captured (degrees). Hotspots sit on things visible
+//    in the photo: u/v = 0..1 from the photo's left / top edge, `to` = destination zone id.
+export const virtualTour: import("@/lib/tour/tour").TourStop[] = [
+  {
+    id: "strength",
+    zone: "01",
+    title: "Strength Training",
+    description: "Cable stations, selectorised machines and Olympic benches under the red-and-black beams.",
+    label: "Strength training floor",
+    src: "/images/tour/zone-01-strength.jpg",
+    srcSmall: "/images/tour/zone-01-strength-sm.jpg",
+    thumb: "/images/tour/zone-01-strength-thumb.jpg",
+    kind: "photo",
+    hfov: 100,
+    aspect: 1672 / 941,
+    pitch: -4,
+    hotspots: [
+      { to: "main-floor", u: 0.465, v: 0.6 }, // wooden door
+      { to: "free-weights", u: 0.79, v: 0.64 }, // barbell benches on the right
+    ],
+  },
+  {
+    id: "cardio",
+    zone: "02",
+    title: "Cardio & Treadmills",
+    description: "A full row of touchscreen treadmills facing the windows and the trees outside.",
+    label: "Treadmill row",
+    src: "/images/tour/zone-02-cardio.jpg",
+    srcSmall: "/images/tour/zone-02-cardio-sm.jpg",
+    thumb: "/images/tour/zone-02-cardio-thumb.jpg",
+    kind: "photo",
+    hfov: 90,
+    aspect: 1672 / 941,
+    pitch: -3,
+    hotspots: [{ to: "main-floor", u: 0.16, v: 0.5 }], // far end of the row
+  },
+  {
+    id: "main-floor",
+    zone: "03",
+    title: "Main Workout Floor",
+    description: "The open hall: spin bikes, cross-trainers and treadmills on turf and polished timber.",
+    label: "Main workout floor",
+    src: "/images/tour/zone-03-main-floor.jpg",
+    srcSmall: "/images/tour/zone-03-main-floor-sm.jpg",
+    thumb: "/images/tour/zone-03-main-floor-thumb.jpg",
+    kind: "photo",
+    hfov: 100,
+    aspect: 1672 / 941,
+    pitch: -8, // half the frame is ceiling: rest on the machines
+    hotspots: [
+      { to: "cardio", u: 0.88, v: 0.66 }, // treadmills on the right
+      { to: "strength", u: 0.085, v: 0.6 }, // doorway on the left
+    ],
+  },
+  {
+    id: "free-weights",
+    zone: "04",
+    title: "Dumbbell & Free Weights",
+    description: "Full dumbbell racks, adjustable benches and mirror walls on rubber flooring.",
+    label: "Dumbbell and free-weights area",
+    src: "/images/tour/zone-04-free-weights.jpg",
+    srcSmall: "/images/tour/zone-04-free-weights-sm.jpg",
+    thumb: "/images/tour/zone-04-free-weights-thumb.jpg",
+    kind: "photo",
+    hfov: 100,
+    aspect: 1672 / 941,
+    pitch: -4,
+    hotspots: [{ to: "strength", u: 0.52, v: 0.47 }], // mirror reflecting the strength floor
   },
 ];
 

@@ -4,6 +4,7 @@ import Lenis from "lenis";
 import { createContext, useContext, useEffect, useState } from "react";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/utils";
+import { readGateDebug } from "@/lib/gate/debug";
 
 declare global {
   interface Window {
@@ -38,6 +39,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const tick = (time: number) => lenis.raf(time * 1000);
     gsap.ticker.add(tick);
     gsap.ticker.lagSmoothing(0);
+
+    if (readGateDebug() !== null) {
+      setPreloaded(true);
+      setLoaded(true);
+    }
 
     return () => {
       gsap.ticker.remove(tick);

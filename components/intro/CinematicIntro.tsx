@@ -10,6 +10,7 @@ import { chooseIntroMode, readEnvironment, type IntroMode } from "@/lib/intro/ca
 import { createAudioController, type AudioController } from "@/lib/intro/impactSound";
 import { initialIntroState, introReducer } from "@/lib/intro/machine";
 import { IntroFallback } from "./IntroFallback";
+import { readGateDebug } from "@/lib/gate/debug";
 
 const IntroScene = dynamic(() => import("./IntroScene"), { ssr: false, loading: () => null });
 
@@ -227,6 +228,9 @@ export function CinematicIntro({ enabled = FEATURES.barbellIntro }: { enabled?: 
   const [done, setDone] = useState(false);
   const onReveal = useCallback(() => setLoaded(true), [setLoaded]);
   const onDone = useCallback(() => setDone(true), []);
+  useEffect(() => {
+    if (readGateDebug() !== null) setDone(true);
+  }, []);
 
   useEffect(() => {
     if (!enabled && preloaded) setLoaded(true);

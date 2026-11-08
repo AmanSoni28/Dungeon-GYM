@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { gsap } from "@/lib/gsap";
 import { prefersReducedMotion, rand } from "@/lib/utils";
 import { useApp } from "@/components/providers/AppProvider";
+import { readGateDebug } from "@/lib/gate/debug";
 
 const STATUS = ["Heating the forge", "Loading the iron", "Lighting the torches", "Opening the gate"];
 
@@ -15,6 +16,10 @@ export function Preloader() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
+    if (readGateDebug() !== null) {
+      setDone(true);
+      return;
+    }
     const reduce = prefersReducedMotion();
     const ctx = gsap.context(() => {
       const obj = { v: 0 };

@@ -6,7 +6,13 @@ import { CinematicIntro } from "@/components/intro/CinematicIntro";
 import { AppProvider, useApp } from "@/components/providers/AppProvider";
 import type { GymView } from "@/lib/gym/look";
 
-vi.mock("../GymViewer", () => ({ default: () => <div data-testid="webgl-viewer" /> }));
+const gl = vi.hoisted(() => ({ crash: false }));
+vi.mock("../GymViewer", () => ({
+  default: () => {
+    if (gl.crash) throw new Error("ChunkLoadError: Loading chunk 380 failed.");
+    return <div data-testid="webgl-viewer" />;
+  },
+}));
 
 // IntersectionObserver isn't in jsdom: report everything as visible
 class IO {
@@ -41,6 +47,17 @@ describe("<RealGym />", () => {
   it("uses the WebGL viewer when available", async () => {
     render(<RealGym views={[photo]} forceMode="full" />);
     expect(await screen.findByTestId("webgl-viewer")).toBeTruthy();
+  });
+
+  it("falls back to the photo instead of crashing the page if the 3D viewer fails to load", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    gl.crash = true;
+    try {
+      render(<RealGym views={[photo]} forceMode="full" />);
+      expect(await screen.findByAltText("Main training floor, Dungeon Gym")).toBeTruthy();
+    } finally {
+      gl.crash = false;
+    }
   });
 
   it("hides the 'Drag to explore' hint after the visitor drags", () => {

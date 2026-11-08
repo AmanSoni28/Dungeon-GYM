@@ -21,7 +21,7 @@ const serif = Cormorant_Garamond({
 export const metadata: Metadata = {
   title: "Dungeon Gym & Spa | Forge Your Body. Restore Your Soul.",
   description:
-    "Premium strength gym and luxury recovery spa. Elite trainers, a 360° virtual tour, group classes, steam, sauna, massage and ice plunge.",
+    "Premium strength gym and luxury recovery spa. Elite trainers, a virtual gym tour, group classes, steam, sauna, massage and ice plunge.",
 };
 
 export const viewport: Viewport = {

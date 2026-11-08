@@ -12,6 +12,7 @@ import { useInView } from "@/lib/useInView";
 import { scrollToTarget } from "@/lib/utils";
 import { createLookState, type GymLookState } from "@/lib/gym/state";
 import { GymPhotoFallback } from "@/components/gym/GymPhotoFallback";
+import { ViewerBoundary } from "@/components/gym/ViewerBoundary";
 
 const GymViewer = dynamic(() => import("@/components/gym/GymViewer"), { ssr: false, loading: () => null });
 
@@ -141,16 +142,18 @@ export function RealGym({ views = gymViews, forceMode }: { views?: GymView[]; fo
         data-cursor="Drag"
       >
         {seen && (mode === "full" || mode === "lite") && (
-          <GymViewer
-            key={view.id}
-            view={view}
-            look={look}
-            running={inView}
-            lite={mode === "lite"}
-            autoRotate={autoRotate}
-            onLook={onLook}
-            onReady={() => setReady(true)}
-          />
+          <ViewerBoundary onError={() => setMode("fallback")}>
+            <GymViewer
+              key={view.id}
+              view={view}
+              look={look}
+              running={inView}
+              lite={mode === "lite"}
+              autoRotate={autoRotate}
+              onLook={onLook}
+              onReady={() => setReady(true)}
+            />
+          </ViewerBoundary>
         )}
         {seen && mode === "fallback" && <GymPhotoFallback view={view} look={look} onLook={onLook} />}
         <div className={`realgym__loading ${ready || mode === "fallback" ? "is-hidden" : ""}`} aria-hidden />
