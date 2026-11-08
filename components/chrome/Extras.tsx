@@ -27,23 +27,4 @@ export function WhatsAppButton() {
   );
 }
 
-export function Marquee({ items, reverse = false }: { items: string[]; reverse?: boolean }) {
-  const row = (
-    <div className="marquee__row">
-      {items.map((t, i) => (
-        <span key={i}>
-          {t}
-          <i aria-hidden>✦</i>
-        </span>
-      ))}
-    </div>
-  );
-  return (
-    <div className={`marquee ${reverse ? "is-reverse" : ""}`} aria-hidden>
-      <div className="marquee__track">
-        {row}
-        {row}
-      </div>
-    </div>
-  );
-}
+export { Marquee } from "./Marquee";

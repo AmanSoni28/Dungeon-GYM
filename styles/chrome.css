@@ -497,59 +497,165 @@
 }
 
 /* ════════ Marquee ════════ */
+/* ════════ Spotlight ribbon (Marquee) ════════
+   Outlined words glide through; the one passing the centre ignites into molten gold (--f, set per frame). */
 .marquee {
+  --ribbon-bg: oklch(0.13 0.008 70);
   position: relative;
   overflow: clip;
-  padding-block: 26px;
-  border-block: 1px solid var(--line);
-  rotate: -2deg;
   margin-inline: -4vw;
-  background: var(--ink);
-  mask: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  padding-block: 8px;
+  rotate: -2deg;
+  isolation: isolate;
+  mask: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
 
   &.is-reverse {
     rotate: 2deg;
   }
+
+  /* hairlines with a travelling glint */
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    height: 1px;
+    background:
+      linear-gradient(90deg, transparent 0 40%, color-mix(in oklch, var(--accent) 95%, white) 50%, transparent 60% 100%) no-repeat,
+      linear-gradient(90deg, transparent, color-mix(in oklch, var(--accent) 45%, transparent) 30% 70%, transparent);
+    background-size: 30% 100%, 100% 100%;
+    animation: ribbon-glint 6s linear infinite;
+    pointer-events: none;
+  }
+  &::before {
+    top: 8px;
+  }
+  &::after {
+    bottom: 8px;
+    animation-direction: reverse;
+    animation-delay: -3s;
+  }
 }
+@keyframes ribbon-glint {
+  from { background-position: -40% 0, 0 0; }
+  to { background-position: 140% 0, 0 0; }
+}
+
+/* the band itself: dark lacquer with a soft warm pool of light in the middle */
+.marquee__ribbon {
+  position: relative;
+  padding-block: clamp(20px, 2.6vw, 34px);
+  background:
+    radial-gradient(ellipse 34% 120% at 50% 50%, color-mix(in oklch, var(--accent) 16%, transparent), transparent 70%),
+    linear-gradient(180deg, oklch(0.16 0.01 70), var(--ribbon-bg) 45%, oklch(0.1 0.006 70));
+  /* unfolds from the centre line as it scrolls into view */
+  clip-path: inset(50% 0 50% 0);
+  transition: clip-path 1.3s var(--ease-in-out);
+
+  .marquee.is-in & {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
 .marquee__track {
+  --lean: 0deg;
+  position: relative; /* offsetParent for the word measurements */
   display: flex;
   width: max-content;
-  animation: marquee 38s linear infinite;
-}
-.marquee.is-reverse .marquee__track {
-  animation-direction: reverse;
+  will-change: transform;
 }
 .marquee__row {
   display: flex;
+}
 
-  span {
-    display: inline-flex;
-    align-items: center;
-    gap: 40px;
-    padding-right: 40px;
-    font-family: var(--font-display);
-    font-size: clamp(40px, 6vw, 90px);
-    line-height: 1;
-    text-transform: uppercase;
+.marquee__item {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(26px, 3.4vw, 52px);
+  padding-right: clamp(26px, 3.4vw, 52px);
+}
+
+.marquee__word {
+  --f: 0;
+  position: relative;
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: clamp(40px, 6vw, 90px);
+  line-height: 1.05;
+  letter-spacing: calc(0.01em + var(--f) * 0.035em);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: transparent;
+  /* outline warms from a quiet grey to gold as the word nears the centre */
+  -webkit-text-stroke: 1px color-mix(in oklch, var(--accent) calc(var(--f) * 100%), color-mix(in oklch, var(--text) 38%, transparent));
+  transform: skewX(var(--lean)) scale(calc(0.94 + var(--f) * 0.08));
+  transform-origin: 50% 60%;
+  opacity: calc(0.55 + var(--f) * 0.45);
+
+  /* molten gold fill, revealed by the spotlight, with a slow light sweep running through it */
+  &::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
     color: transparent;
-    -webkit-text-stroke: 1px color-mix(in oklch, var(--text) 40%, transparent);
-    transition: color 0.4s, -webkit-text-stroke-color 0.4s;
-
-    &:nth-child(2n) {
-      color: var(--accent);
-      -webkit-text-stroke-color: transparent;
-    }
-    i {
-      font-style: normal;
-      font-size: 0.4em;
-      color: var(--accent);
-      -webkit-text-stroke: 0;
-    }
+    -webkit-text-stroke: 0;
+    background:
+      linear-gradient(100deg, transparent 40%, rgb(255 251 238 / 0.9) 50%, transparent 60%) no-repeat,
+      linear-gradient(176deg, color-mix(in oklch, var(--accent) 30%, white) 6%, var(--accent) 42%, color-mix(in oklch, var(--accent) 62%, black) 88%);
+    background-size: 260% 100%, 100% 100%;
+    background-position: 100% 0, 0 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    opacity: var(--f);
+    filter: drop-shadow(0 0 calc(var(--f) * 26px) color-mix(in oklch, var(--accent) 55%, transparent));
+    animation: ribbon-sheen 4.8s var(--ease-in-out) infinite;
   }
 }
-.marquee:hover .marquee__track {
-  animation-play-state: paused;
+@keyframes ribbon-sheen {
+  0% { background-position: 100% 0, 0 0; }
+  45%, 100% { background-position: 0% 0, 0 0; }
 }
+
+/* four-point star: slow turn and a soft pulse */
+.marquee__star {
+  display: inline-grid;
+  width: clamp(14px, 1.5vw, 22px);
+  aspect-ratio: 1;
+  color: var(--accent);
+  filter: drop-shadow(0 0 8px color-mix(in oklch, var(--accent) 60%, transparent));
+  animation: ribbon-star 9s linear infinite;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+  }
+  .marquee__item:nth-child(2n) & {
+    animation-direction: reverse;
+    animation-duration: 12s;
+  }
+}
+@keyframes ribbon-star {
+  0% { transform: rotate(0deg) scale(0.85); opacity: 0.7; }
+  50% { transform: rotate(180deg) scale(1.08); opacity: 1; }
+  100% { transform: rotate(360deg) scale(0.85); opacity: 0.7; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee::before,
+  .marquee::after,
+  .marquee__word::after,
+  .marquee__star {
+    animation: none;
+  }
+  .marquee__ribbon {
+    clip-path: none;
+    transition: none;
+  }
+}
+
 @keyframes marquee {
   to { transform: translateX(-50%); }
 }
