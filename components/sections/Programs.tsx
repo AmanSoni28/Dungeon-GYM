@@ -1,12 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
-import { classes, muscles, type MuscleId } from "@/data/site";
+import { muscles, type MuscleId } from "@/data/site";
 import { useInView } from "@/lib/useInView";
 import { SplitHeading } from "@/components/ui/SplitHeading";
+import { GroupClasses } from "./classes/GroupClasses";
 
 const MuscleScene = dynamic(() => import("@/components/three/MuscleScene"), { ssr: false });
 
@@ -92,25 +92,8 @@ export function Programs() {
         </div>
       </div>
 
-      {/* Class cards: horizontal snap rail */}
-      <div className="classes">
-        <div className="container">
-          <h3 className="classes__title">Group Classes</h3>
-        </div>
-        <div className="classes__rail" data-cursor="Drag">
-          {classes.map((c, i) => (
-            <article key={c.name} className="class-card" style={{ "--i": i } as React.CSSProperties}>
-              <div className="class-card__img" aria-hidden>
-                <Image src={c.image} alt="" fill sizes="(max-width: 600px) 80vw, 340px" />
-              </div>
-              <span className="class-card__tag">{c.tag}</span>
-              <h4>{c.name}</h4>
-              <p>{c.desc}</p>
-              <span className="class-card__num">0{i + 1}</span>
-            </article>
-          ))}
-        </div>
-      </div>
+      {/* Group classes: hauled into the rail on a battle rope */}
+      <GroupClasses />
     </section>
   );
 }

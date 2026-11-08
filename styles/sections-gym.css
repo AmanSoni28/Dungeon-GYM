@@ -977,6 +977,280 @@
   translate: 0 10px;
 }
 
+/* ════════ Group classes: hauled in on a battle rope (scroll-driven, pinned) ════════ */
+.classes__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px 40px;
+  margin-bottom: 26px;
+
+  .classes__title {
+    margin-bottom: 0;
+  }
+}
+
+/* "03 / 06 ─── scroll to haul them in": how much of the rope is in */
+.classes__meter {
+  --haul: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted);
+
+  b {
+    font-weight: 600;
+    color: var(--gold);
+    font-variant-numeric: tabular-nums;
+  }
+  i {
+    position: relative;
+    width: clamp(90px, 14vw, 180px);
+    height: 1px;
+    background: var(--line);
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      transform-origin: left;
+      transform: scaleX(var(--haul));
+      background: linear-gradient(90deg, var(--gold-deep), var(--gold-bright));
+      box-shadow: 0 0 10px color-mix(in oklch, var(--gold) 60%, transparent);
+    }
+  }
+  em {
+    font-style: normal;
+    opacity: calc(1 - var(--haul) * 1.4);
+  }
+}
+
+.classes__stage {
+  --ath-h: 480px; /* athlete canvas height (width follows at 3:5, matching the 3D camera) */
+  --ath-w: calc(var(--ath-h) * 0.6);
+  --ath-left: calc(max(var(--gutter), (100vw - var(--maxw)) / 2) - 40px);
+  --card-w: min(78vw, 330px);
+  --card-h: 440px;
+  --fx: 50%; /* centre of the spotlight (set from JS) */
+  --rail-pt: 24px;
+  --rope-w: 11px;
+  position: relative;
+  overflow-x: clip; /* the rope runs off to the right without widening the page */
+}
+
+/* rope sits behind the cards (seen in the gaps and through the eyelets); the athlete stands in front */
+.classes__rope {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 0;
+}
+.rope {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.rope--shadow {
+  stroke: rgb(0 0 0 / 0.55);
+  stroke-width: calc(var(--rope-w) + 4px);
+  transform: translateY(9px);
+}
+.rope--core {
+  stroke: #17130f;
+  stroke-width: var(--rope-w);
+}
+/* braided twist: tan bands that travel along the rope as it is hauled */
+.rope--strand {
+  stroke: #5a4622;
+  stroke-width: calc(var(--rope-w) - 3px);
+  stroke-dasharray: 1.6 5.2;
+  stroke-linecap: butt;
+  opacity: 0.6;
+}
+.rope--sheen {
+  stroke: rgb(255 236 196 / 0.2);
+  stroke-width: 2px;
+  transform: translateY(calc(var(--rope-w) * -0.24));
+}
+
+.classes__athlete {
+  position: absolute;
+  z-index: 2;
+  left: var(--ath-left);
+  top: calc(var(--rail-pt) + var(--card-h) - var(--ath-h) * 0.933);
+  width: var(--ath-w);
+  height: var(--ath-h);
+  pointer-events: none;
+  /* a warm pool of light behind him, so he reads as lit on a stage */
+  background: radial-gradient(ellipse 60% 46% at 46% 52%, color-mix(in oklch, var(--gold) 9%, transparent), transparent 70%);
+
+  canvas {
+    display: block;
+  }
+}
+
+/* the spotlight the centred card is hauled into: a warm pool behind it and a glint on the floor */
+.classes__spot {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 300px 62% at var(--fx) 46%, color-mix(in oklch, var(--gold) 13%, transparent), transparent 72%),
+    radial-gradient(ellipse 260px 22px at var(--fx) calc(var(--rail-pt) + var(--card-h) + 14px), color-mix(in oklch, var(--gold) 22%, transparent), transparent 75%);
+}
+
+/* the rail is a stage, not a scroller: cards are placed and moved by the rope (transforms from JS) */
+.classes__stage .classes__rail {
+  --eye-y: 140px; /* overwritten each frame from the athlete's hands */
+  position: relative;
+  z-index: 1;
+  display: block;
+  overflow: visible;
+  gap: 44px; /* read by JS as the card pitch */
+  height: calc(var(--rail-pt) + var(--card-h) + 44px);
+  padding: 0;
+  scroll-snap-type: none;
+}
+/* the global "hover one card, dim the rest" rule would fight the spotlight here */
+.classes__stage .classes__rail:has(.class-card:hover) .class-card:not(:hover) {
+  opacity: 1;
+  filter: none;
+}
+
+.class-slot {
+  --focus: 0;
+  position: absolute;
+  left: 0;
+  top: var(--rail-pt);
+  width: var(--card-w);
+  height: var(--card-h);
+  transform-origin: 50% var(--eye-y); /* cards hang (and scale) on the rope line */
+  will-change: transform, opacity;
+  cursor: pointer;
+
+  .class-card {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    border-color: color-mix(in oklch, var(--gold) calc(12% + var(--focus) * 48%), var(--line));
+    box-shadow:
+      0 40px 80px -40px rgb(0 0 0 / 0.9),
+      0 0 calc(var(--focus) * 70px) calc(var(--focus) * -14px) color-mix(in oklch, var(--gold) 42%, transparent);
+    transition: border-color 0.5s, transform 0.6s var(--ease-out);
+
+    /* queued cards wait in the dark */
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      border-radius: inherit;
+      background: linear-gradient(180deg, rgb(8 7 6 / 0.35), rgb(8 7 6 / 0.7));
+      opacity: calc(1 - var(--focus));
+      pointer-events: none;
+    }
+    /* a light sweep runs across each card as it arrives in the spotlight */
+    &::before {
+      content: "";
+      position: absolute;
+      inset: -10% -60%;
+      z-index: 4;
+      background: linear-gradient(105deg, transparent 42%, rgb(255 244 214 / 0.16) 50%, transparent 58%);
+      transform: translateX(-70%);
+      pointer-events: none;
+    }
+  }
+  &.is-focus {
+    cursor: default;
+
+    .class-card::before {
+      animation: class-arrive 1.2s var(--ease-out) both;
+    }
+    .class-card__img img {
+      filter: grayscale(0.1) brightness(0.72) contrast(1.08);
+      transform: scale(1.04);
+    }
+    .class-card__num {
+      -webkit-text-stroke-color: color-mix(in oklch, var(--gold) 70%, transparent);
+    }
+  }
+}
+@keyframes class-arrive {
+  to { transform: translateX(70%); }
+}
+
+/* forged gold eyelets on both edges of each card: the rope runs through them */
+.class-slot__eye {
+  position: absolute;
+  z-index: 2;
+  top: var(--eye-y);
+  width: 22px;
+  height: 22px;
+  translate: 0 -50%;
+  border-radius: 50%;
+  background: radial-gradient(circle, transparent 38%, #fff1c8 42%, var(--gold) 56%, var(--gold-deep) 70%, transparent 74%);
+  filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.6));
+  pointer-events: none;
+
+  /* riveted mounting plate on the card edge */
+  &::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 9px;
+    height: 26px;
+    translate: 0 -50%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--gold-deep), var(--gold) 50%, var(--gold-deep));
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.35);
+  }
+  &.is-left {
+    left: -12px;
+    &::before { left: 15px; }
+  }
+  &.is-right {
+    right: -12px;
+    &::before { right: 15px; }
+  }
+}
+
+@media (max-width: 1024px) {
+  .classes__stage {
+    --ath-h: 400px;
+    --rope-w: 9px;
+  }
+}
+@media (max-width: 640px) {
+  .classes__meter em {
+    display: none;
+  }
+  .classes__stage {
+    --card-w: 62vw;
+    --card-h: 400px;
+    --ath-h: 200px;
+    --ath-left: 0px;
+    --rope-w: 7px;
+  }
+  .classes__stage .classes__rail {
+    gap: 26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .class-slot {
+    will-change: auto;
+  }
+}
+
 /* ════════ Equipment (pinned) ════════ */
 .equip {
   --p: 0;
