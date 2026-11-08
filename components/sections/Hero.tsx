@@ -1,22 +1,17 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
 import { useApp } from "@/components/providers/AppProvider";
 import { Button } from "@/components/ui/Button";
 import { brand } from "@/data/site";
 import { readEnvironment } from "@/lib/intro/capabilities";
-import { createGateSound, type GateSound } from "@/lib/gate/gateSound";
-import { createSmashClock, SCRUB, scrollToSmashTime, SMASH_T, type SmashBeat } from "@/lib/gate/smash";
-import { scrollToTarget } from "@/lib/utils";
-import { SmashControls } from "./SmashControls";
-import { readGateDebug } from "@/lib/gate/debug";
 
 const GateScene = dynamic(() => import("@/components/three/GateScene"), { ssr: false });
 
-/** scroll progress over which the landing wordmark gives way to the shot */
-const TITLE_OUT = 0.09;
+/** scroll progress over which the landing wordmark gives way as the gate opens */
+const TITLE_OUT = 0.14;
 
 function Letters({ text }: { text: string }) {
   return (
@@ -31,47 +26,25 @@ function Letters({ text }: { text: string }) {
 }
 
 /**
- * Landing: the closed gate behind the DUNGEON wordmark. Scrolling drives the shot:
- * the camera creeps in, a dumbbell is hurled at the gate, it smashes the crest and the doors swing open,
- * then further scrolling walks the visitor through into the gym. Scrolling back rewinds it.
+ * Landing: the closed gate behind the DUNGEON wordmark. Scrolling swings the heavy iron doors open
+ * and walks the visitor through them, into the golden light of the gym. Scrolling back closes them.
  */
 export function Hero() {
   const section = useRef<HTMLElement>(null);
   const progress = useRef(0);
   const { loaded } = useApp();
   const [active, setActive] = useState(true);
-
-  const smash = useRef(createSmashClock());
   const [sceneReady, setSceneReady] = useState(false);
   const [lite, setLite] = useState(false);
-  /** reduced motion: no smash, scroll simply swings the gate open */
-  const [classic, setClassic] = useState(false);
-  const [soundOn, setSoundOn] = useState(false);
-  const sound = useRef<GateSound | null>(null);
-  const rumbling = useRef(false);
-  const flash = useRef<HTMLDivElement>(null);
 
-  // low rumble bed while the shot is in progress (silent unless the visitor turned sound on)
-  const syncRumble = useCallback((p: number) => {
-    const s = sound.current;
-    if (!s || !smash.current.scrub) return;
-    const inShot = p > 0.004 && p < SCRUB.share;
-    if (inShot && !rumbling.current) rumbling.current = s.startRumble();
-    else if (!inShot && rumbling.current) {
-      s.stopRumble();
-      rumbling.current = false;
-    }
-  }, []);
-
-  // Pin the hero and map scroll → the smash timeline, then the walk through the gate
+  // Pin the hero and map scroll → 0..1 progress for the 3D camera + gate
   useEffect(() => {
     const el = section.current!;
-    el.dataset.smash = "idle";
     const ctx = gsap.context(() => {
       ScrollTrigger.create({
         trigger: el,
         start: "top top",
-        end: "+=360%",
+        end: "+=230%",
         pin: true,
         scrub: true,
         onUpdate: (s) => {
@@ -83,73 +56,18 @@ export function Hero() {
           // the real-gym scene that follows starts from the same light (one continuous shot)
           const t = Math.min(1, Math.max(0, (p - 0.8) / 0.17));
           el.style.setProperty("--flash", (t * t * (3 - 2 * t)).toFixed(3));
-
-          const c = smash.current;
-          if (c.scrub) {
-            c.goal = scrollToSmashTime(p);
-            el.dataset.smash = p < 0.004 ? "idle" : p < SCRUB.share ? "playing" : "done";
-          }
-          syncRumble(p);
         },
         onToggle: (s) => setActive(s.isActive || s.progress < 1),
       });
     }, el);
     return () => ctx.revert();
-  }, [syncRumble]);
+  }, []);
 
-  // device + preference checks
+  // lighter 3D on phones / low-power devices
   useEffect(() => {
     const env = readEnvironment();
     setLite(env.mobile || env.lowPower);
-    const c = smash.current;
-    const dbg = readGateDebug();
-    if (typeof dbg === "number") {
-      // dev: hold a single frame of the sequence
-      Object.assign(c, { t: dbg, scrub: false, frozen: true, run: 1 });
-      return;
-    }
-    if (env.reducedMotion) {
-      setClassic(true);
-      return;
-    }
-    Object.assign(c, { t: 0, goal: scrollToSmashTime(progress.current), scrub: true, run: 1 });
   }, []);
-
-  // audio (silent until the visitor turns it on)
-  useEffect(() => {
-    const s = createGateSound();
-    sound.current = s;
-    return () => s.dispose();
-  }, []);
-
-  // beats from the 3D timeline (fired when scrolling forward through them) → sound + flash
-  useEffect(() => {
-    smash.current.onBeat = (beat: SmashBeat) => {
-      const s = sound.current;
-      if (beat === "throw") s?.whoosh(SMASH_T.impact - SMASH_T.throw);
-      if (beat === "impact") {
-        s?.crash(1);
-        if (flash.current) gsap.fromTo(flash.current, { opacity: 0.85 }, { opacity: 0, duration: 0.55, ease: "power2.out" });
-      }
-      if (beat === "open") s?.creak(SMASH_T.openEnd - SMASH_T.openStart);
-      if (beat === "end") s?.reveal();
-    };
-  }, []);
-
-  const skip = useCallback(() => scrollToTarget("#inside"), []);
-
-  const toggleSound = useCallback(async () => {
-    const s = sound.current;
-    if (!s) return;
-    if (soundOn) {
-      s.disable();
-      rumbling.current = false;
-      setSoundOn(false);
-    } else if (await s.enable()) {
-      setSoundOn(true);
-      syncRumble(progress.current);
-    }
-  }, [soundOn, syncRumble]);
 
   // Landing reveal: the wordmark materialises out of the dark, letter by letter
   useEffect(() => {
@@ -170,14 +88,9 @@ export function Hero() {
     <section ref={section} id="top" className="hero" aria-label={brand.full} data-reveal={loaded ? "true" : "false"}>
       <div className="hero__canvas">
         {/* paused behind the cinematic intro, starts when the homepage is revealed */}
-        <GateScene progress={progress} active={active && loaded} smash={smash} lite={lite} onReady={() => setSceneReady(true)} />
+        <GateScene progress={progress} active={active && loaded} lite={lite} onReady={() => setSceneReady(true)} />
       </div>
       <div className="hero__vignette" />
-      <div className="hero__bars" aria-hidden>
-        <i />
-        <i />
-      </div>
-      <div ref={flash} className="hero__impact" aria-hidden />
       <div className="hero__frame" aria-hidden>
         <i />
         <i />
@@ -201,7 +114,7 @@ export function Hero() {
       </div>
 
       <p className="hero__hint" aria-hidden>
-        {classic ? "Scroll to open the gate" : "Scroll to break the gate"}
+        Scroll to open the gate
       </p>
       <div className="hero__scroll" aria-hidden>
         <i />
@@ -213,8 +126,6 @@ export function Hero() {
           <span className="sr-only">Loading the Dungeon</span>
         </div>
       )}
-
-      {loaded && !classic && <SmashControls soundOn={soundOn} onSkip={skip} onToggleSound={toggleSound} />}
 
       <div className="hero__flash" aria-hidden />
     </section>

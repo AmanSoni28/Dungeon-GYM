@@ -561,8 +561,8 @@ export default function GateScene({ progress, active = true, smash, lite = false
       </Environment>
       <SmashDirector clock={clock} />
       <Gate progress={progress} smash={clock} />
-      <Dumbbell clock={clock} lite={lite} />
-      <ImpactFX clock={clock} lite={lite} />
+      {smash && <Dumbbell clock={clock} lite={lite} />}
+      {smash && <ImpactFX clock={clock} lite={lite} />}
       <Atmosphere clock={clock} lite={lite} />
       <Embers count={lite ? 160 : 380} />
       <CameraRig progress={progress} smash={clock} />
