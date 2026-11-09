@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f6e27a"/>
+      <stop offset=".45" stop-color="#d4af37"/>
+      <stop offset=".7" stop-color="#fff1b8"/>
+      <stop offset="1" stop-color="#a8801f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".38" r=".7">
+      <stop offset="0" stop-color="#2a2114"/>
+      <stop offset="1" stop-color="#0b0a08"/>
+    </radialGradient>
+  </defs>
+  <!-- tile -->
+  <rect width="64" height="64" rx="14" fill="url(#glow)"/>
+  <rect x="1" y="1" width="62" height="62" rx="13" fill="none" stroke="url(#gold)" stroke-opacity=".55" stroke-width="1.5"/>
+  <!-- barbell through the monogram -->
+  <rect x="9" y="30.75" width="46" height="2.5" rx="1.25" fill="url(#gold)"/>
+  <rect x="8" y="24" width="4" height="16" rx="1.5" fill="url(#gold)"/>
+  <rect x="52" y="24" width="4" height="16" rx="1.5" fill="url(#gold)"/>
+  <!-- D monogram -->
+  <path fill="url(#gold)" fill-rule="evenodd" d="M19 13h13a19 19 0 0 1 0 38H19Zm7 7v24h6a12 12 0 0 0 0-24Z"/>
+</svg>
