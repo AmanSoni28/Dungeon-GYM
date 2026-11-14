@@ -12,7 +12,10 @@ const STATUS = ["Heating the forge", "Loading the iron", "Lighting the torches",
 export function Preloader() {
   const { setPreloaded } = useApp();
   const root = useRef<HTMLDivElement>(null);
-  const [count, setCount] = useState(0);
+  const logo = useRef<HTMLDivElement>(null);
+  const countEl = useRef<HTMLSpanElement>(null);
+  const statusEl = useRef<HTMLSpanElement>(null);
+  const bar = useRef<HTMLDivElement>(null);
   const [done, setDone] = useState(false);
 
   useEffect(() => {
@@ -24,26 +27,44 @@ export function Preloader() {
     const k = reduce ? 0.1 : 1; // time scale
     const ctx = gsap.context(() => {
       const obj = { v: 0 };
+      let shown = -1;
+      let statusIdx = 0;
+      // per-frame updates go straight to the DOM: re-rendering React 60×/s was the main source of jank
+      const paint = () => {
+        const v = Math.round(obj.v);
+        if (v === shown) return;
+        shown = v;
+        logo.current?.style.setProperty("--p", `${v}%`);
+        if (countEl.current) countEl.current.textContent = String(v).padStart(3, "0");
+        if (bar.current) bar.current.style.transform = `scaleX(${v / 100})`;
+        const i = Math.min(STATUS.length - 1, Math.floor(v / 26));
+        if (i !== statusIdx && statusEl.current) {
+          statusIdx = i;
+          statusEl.current.textContent = `${STATUS[i]}…`;
+          gsap.fromTo(statusEl.current, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.6, ease: "expo.out" });
+        }
+      };
       const tl = gsap.timeline({ defaults: { ease: "expo.out" } });
 
       // ── entrance
       tl.fromTo(".pl__glow", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 1.6 * k }, 0)
         .fromTo(
           ".pl__word",
-          { clipPath: "inset(100% 0 0 0)", letterSpacing: "0.35em", filter: "blur(14px)", yPercent: 18 },
-          { clipPath: "inset(0% 0 0 0)", letterSpacing: "0.04em", filter: "blur(0px)", yPercent: 0, duration: 1.4 * k },
+          // transform-only stand-ins for the old blur + letter-spacing tween (those repainted/re-laid-out every frame)
+          { clipPath: "inset(100% 0 0 0)", scaleX: 1.25, opacity: 0, yPercent: 18 },
+          { clipPath: "inset(0% 0 0 0)", scaleX: 1, opacity: 1, yPercent: 0, duration: 1.4 * k },
           0.1 * k
         )
         .fromTo(".pl__rule", { scaleX: 0 }, { scaleX: 1, duration: 1.1 * k, ease: "power3.inOut" }, 0.5 * k)
-        .fromTo(".pl__sub", { opacity: 0, letterSpacing: "0.9em" }, { opacity: 1, letterSpacing: "0.3em", duration: 1.3 * k }, 0.6 * k)
+        .fromTo(".pl__sub", { opacity: 0, scaleX: 1.5 }, { opacity: 1, scaleX: 1, duration: 1.3 * k }, 0.6 * k)
         .fromTo(".pl__foot, .pl__track", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.9 * k }, 0.7 * k)
 
         // ── molten fill (counter drives the gradient)
-        .to(obj, { v: 100, duration: 2.4 * k, ease: "power2.inOut", onUpdate: () => setCount(Math.round(obj.v)) }, 0.4 * k)
+        .to(obj, { v: 100, duration: 2.4 * k, ease: "power2.inOut", onUpdate: paint }, 0.4 * k)
 
         // ── exit: flare, squash into the crack, split open
         .addLabel("exit")
-        .to(".pl__word", { filter: "brightness(2.2) blur(0px)", duration: 0.25 * k, ease: "power2.out" }, "exit")
+        .to(".pl__word", { filter: "brightness(2.2)", duration: 0.25 * k, ease: "power2.out" }, "exit")
         .to(".pl__foot, .pl__track", { opacity: 0, y: 12, duration: 0.4 * k, ease: "power2.in" }, "exit")
         .to(".pl__logo", { scaleY: 0.015, scaleX: 1.15, opacity: 0, duration: 0.55 * k, ease: "power4.in" }, "exit+=0.15")
         .to(".pl__glow", { scaleX: 2.4, scaleY: 0.12, opacity: 0.9, duration: 0.55 * k, ease: "power4.in" }, "exit+=0.15")
@@ -63,7 +84,6 @@ export function Preloader() {
   }, [setPreloaded]);
 
   if (done) return null;
-  const status = STATUS[Math.min(STATUS.length - 1, Math.floor(count / 26))];
 
   return (
     <div ref={root} className="pl" aria-label="Loading" role="status">
@@ -74,7 +94,7 @@ export function Preloader() {
       <div className="pl__content">
         <div className="pl__glow" aria-hidden />
         <div className="pl__embers" aria-hidden>
-          {Array.from({ length: 36 }, (_, i) => (
+          {Array.from({ length: 24 }, (_, i) => (
             <span
               key={i}
               style={
@@ -90,7 +110,7 @@ export function Preloader() {
           ))}
         </div>
 
-        <div className="pl__logo" style={{ "--p": `${count}%` } as React.CSSProperties}>
+        <div ref={logo} className="pl__logo" style={{ "--p": "0%" } as React.CSSProperties}>
           <span className="pl__wordwrap">
             <span className="pl__word">DUNGEON</span>
             <span className="pl__word pl__word--shine" aria-hidden>
@@ -105,13 +125,15 @@ export function Preloader() {
         </div>
 
         <div className="pl__foot">
-          <span key={status} className="pl__status">
-            {status}…
+          <span ref={statusEl} className="pl__status">
+            {STATUS[0]}…
           </span>
-          <span className="pl__count">{String(count).padStart(3, "0")}</span>
+          <span ref={countEl} className="pl__count">
+            000
+          </span>
         </div>
         <div className="pl__track">
-          <div className="pl__bar" style={{ transform: `scaleX(${count / 100})` }} />
+          <div ref={bar} className="pl__bar" style={{ transform: "scaleX(0)" }} />
         </div>
       </div>
       <div className="pl__crack" />

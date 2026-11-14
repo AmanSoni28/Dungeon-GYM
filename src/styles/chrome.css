@@ -99,6 +99,7 @@
   left: 0;
   right: 0;
   height: 50.5%;
+  will-change: transform;
   background: radial-gradient(ellipse at 50% 100%, oklch(0.2 0.03 50), var(--ink) 70%);
 
   /* molten rim on the split edge — fades as the doors open */
@@ -109,8 +110,9 @@
     right: 0;
     height: 2px;
     opacity: var(--rim);
+    will-change: opacity; /* own layer: --rim tweens stop repainting the whole half */
     background: linear-gradient(90deg, transparent, var(--gold-bright) 30%, oklch(1 0.03 90), var(--gold-bright) 70%, transparent);
-    box-shadow: 0 0 calc(30px * var(--rim)) calc(6px * var(--rim)) color-mix(in oklch, var(--gold) 70%, transparent);
+    box-shadow: 0 0 30px 6px color-mix(in oklch, var(--gold) 70%, transparent);
   }
 
   &.pl__half--top {
@@ -161,8 +163,9 @@
   aspect-ratio: 2.2;
   translate: -50% -50%;
   border-radius: 50%;
+  /* closest-side gradient is already soft; the old blur(20px) on a 1100px box cost more than it showed */
   background: radial-gradient(closest-side, color-mix(in oklch, var(--ember) 32%, transparent), color-mix(in oklch, var(--gold) 10%, transparent) 55%, transparent);
-  filter: blur(20px);
+  will-change: transform, opacity;
   animation: pl-breathe 3.2s ease-in-out infinite alternate;
 }
 @keyframes pl-breathe {
@@ -181,6 +184,7 @@
   box-shadow: 0 0 10px 2px var(--ember);
   animation: ember-rise var(--d) linear infinite;
   animation-delay: var(--delay);
+  will-change: transform, opacity;
 }
 
 @keyframes ember-rise {
@@ -212,7 +216,7 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 30px color-mix(in oklch, var(--gold) 25%, transparent));
+  /* no drop-shadow here: it re-rasterised the 230px word on every fill frame; .pl__glow carries the halo */
 }
 
 /* light glint sweeping across the letters */
@@ -220,8 +224,6 @@
   background: linear-gradient(105deg, transparent 42%, oklch(1 0.03 90 / 0.85) 50%, transparent 58%) 0 0 / 250% 100% no-repeat;
   -webkit-background-clip: text;
   background-clip: text;
-  mix-blend-mode: screen;
-  filter: none;
   animation: pl-glint 2.6s var(--ease-in-out) 0.9s infinite;
 }
 @keyframes pl-glint {
@@ -270,10 +272,6 @@
   letter-spacing: 0.3em;
   text-transform: uppercase;
   color: var(--muted);
-  animation: pl-status 0.6s var(--ease-out) both;
-}
-@keyframes pl-status {
-  from { opacity: 0; translate: 0 8px; filter: blur(4px); }
 }
 
 .pl__count {
