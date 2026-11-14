@@ -25,7 +25,7 @@ class IO {
 }
 vi.stubGlobal("IntersectionObserver", IO);
 
-const photo: GymView = { id: "floor", label: "Main training floor", src: "/images/gym/main-floor.jpg", kind: "photo", hfov: 104, aspect: 1.37 };
+const photo: GymView = { id: "floor", label: "Main training floor", src: "/images/gym/main-floor.webp", kind: "photo", hfov: 104, aspect: 1.37 };
 const pano: GymView = { id: "pano", label: "Spa lounge", src: "/pano.jpg", kind: "equirect", hfov: 360, aspect: 2 };
 
 afterEach(() => cleanup());
@@ -34,7 +34,7 @@ describe("<RealGym />", () => {
   it("shows the real gym photo with honest labelling (not claimed as 360°)", async () => {
     render(<RealGym views={[photo]} forceMode="fallback" />);
     const img = await screen.findByAltText("Main training floor, Dungeon Gym");
-    expect(img.getAttribute("src")).toBe("/images/gym/main-floor.jpg");
+    expect(img.getAttribute("src")).toBe("/images/gym/main-floor.webp");
     expect(screen.getByText(/real photo/i)).toBeTruthy();
     expect(screen.queryByText(/360/)).toBeNull();
   });

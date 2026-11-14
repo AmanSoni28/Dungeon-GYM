@@ -1,12 +1,17 @@
+const CACHE_WEEK = [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   // optional: build into another folder (e.g. to verify a build while `npm run dev` is running)
   distDir: process.env.NEXT_DIST_DIR || ".next",
   transpilePackages: ["three"],
-  // the 3D athlete's model and textures: let browsers keep them for a week instead of re-checking each visit
+  // models, textures and photos: let browsers keep them for a week instead of re-checking each visit
   async headers() {
-    return [{ source: "/models/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }] }];
+    return [
+      { source: "/models/:path*", headers: CACHE_WEEK },
+      { source: "/images/:path*", headers: CACHE_WEEK },
+    ];
   },
   images: {
     formats: ["image/avif", "image/webp"],

@@ -60,7 +60,7 @@ describe("<VirtualTour />", () => {
   it("shows the real photo in the no-WebGL fallback", async () => {
     const { ui } = open("fallback");
     const img = (await ui.findByAltText("Strength training floor, Dungeon Gym")) as HTMLImageElement;
-    expect(img.getAttribute("src")).toBe("/images/tour/zone-01-strength-sm.jpg");
+    expect(img.getAttribute("src")).toBe("/images/tour/zone-01-strength-sm.webp");
   });
 
   it("uses the 3D viewer when WebGL is available", async () => {

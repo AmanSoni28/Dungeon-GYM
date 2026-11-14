@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { muscles, trainers, type MuscleId } from "@/data/site";
@@ -289,8 +290,7 @@ export function Programs() {
                   <div className="matlas__avatar">
                     <span className="matlas__avatar-ring" aria-hidden />
                     {coach?.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={coach.image} alt="" style={{ objectPosition: coach.imagePos }} loading="lazy" />
+                      <Image src={coach.image} alt="" width={46} height={46} style={{ objectPosition: coach.imagePos }} />
                     ) : (
                       <span className="matlas__avatar-initial">{m.trainer[0]}</span>
                     )}
