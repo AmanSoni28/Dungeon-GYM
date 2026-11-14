@@ -52,7 +52,6 @@ export function RealGym({ views = gymViews, forceMode }: { views?: GymView[]; fo
     const apply = (p: number) => {
       look.current.progress = p;
       const v = journeyVisuals(p);
-      el.style.setProperty("--light", v.light.toFixed(3));
       el.style.setProperty("--ui", v.ui.toFixed(3));
       el.style.setProperty("--prompt", v.prompt.toFixed(3));
       // only filter the WebGL canvas while it is actually blurred: a no-op blur(0) still forces an
@@ -63,7 +62,7 @@ export function RealGym({ views = gymViews, forceMode }: { views?: GymView[]; fo
     };
     apply(0);
     // The section overlaps the gate's final screen (see .realgym-wrap) and stays hidden until the
-    // gate finishes, so the golden light hands over instantly: one continuous shot.
+    // gate finishes, so the gym photo behind the gate hands over instantly: one continuous shot.
     const show = (v: boolean) => el.classList.toggle("is-entered", v);
     const ctx = gsap.context(() => {
       ScrollTrigger.create({
@@ -160,7 +159,6 @@ export function RealGym({ views = gymViews, forceMode }: { views?: GymView[]; fo
       </div>
 
       <div className="realgym__vignette" aria-hidden />
-      <div className="realgym__light" aria-hidden />
 
       <div className="realgym__ui">
         <header className="realgym__head">

@@ -15,6 +15,19 @@ type Prog = React.MutableRefObject<number>;
 type Smash = React.MutableRefObject<SmashClock>;
 
 const GATE_Z = -16;
+
+// The real gym behind the gate: the same 360° photo the next section opens on, cropped to its start view
+// (yaw 0 → u 0.25 after the viewer's flip), so walking through the doors lands exactly where the viewer begins.
+const GYM_GLIMPSE = { src: "/images/gym/gym-360.jpg", u: 0.25, w: 0.135, h: 0.21 };
+function useGymGlimpse() {
+  return useMemo(() => {
+    const tex = new THREE.TextureLoader().load(GYM_GLIMPSE.src);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.repeat.set(GYM_GLIMPSE.w, GYM_GLIMPSE.h);
+    tex.offset.set(GYM_GLIMPSE.u - GYM_GLIMPSE.w / 2, 0.5 - GYM_GLIMPSE.h / 2);
+    return tex;
+  }, []);
+}
 const IRON = { color: "#2b2622", metalness: 0.85, roughness: 0.42 };
 
 /* ── Stone corridor with gothic arches ─────────────────── */
@@ -301,6 +314,7 @@ function Gate({ progress, smash }: { progress: Prog; smash: Smash }) {
   const right = useRef<THREE.Group>(null);
   const light = useRef<THREE.PointLight>(null);
   const portal = useRef<THREE.Mesh>(null);
+  const gym = useGymGlimpse();
   const mats = useGateMats();
   const glow = useMemo(() => makeGlowTexture("rgba(255,240,205,1)", "rgba(212,175,55,0)"), []);
   const signMat = useMemo(() => {
@@ -346,8 +360,9 @@ function Gate({ progress, smash }: { progress: Prog; smash: Smash }) {
 
     if (light.current) light.current.intensity = 4 + o * 60 + surge * 25;
     if (portal.current) {
+      // dim through the crack, the full gym once the doors are open (kept under the bloom threshold mostly)
       const m = portal.current.material as THREE.MeshBasicMaterial;
-      m.opacity = Math.min(1, 0.2 + o * 0.8 + surge * 0.5);
+      m.color.setScalar(Math.min(0.9, 0.25 + o * 0.6 + surge * 0.3));
     }
     // the whole gate rattles in its frame on impact
     if (root.current) {
@@ -418,13 +433,13 @@ function Gate({ progress, smash }: { progress: Prog; smash: Smash }) {
       <primitive object={spotTarget} position={[0, 2.4, 0]} />
       <spotLight position={[0, 7.4, 5.5]} target={spotTarget} angle={0.42} penumbra={0.85} intensity={130} decay={1.4} distance={24} color="#ffe2b8" />
 
-      {/* light behind the gate */}
-      <mesh ref={portal} position={[0, 2.8, -2.5]}>
+      {/* the real gym behind the gate (9 × 7 matches the crop's aspect); the camera ends 1.5 in front of it */}
+      <mesh ref={portal} position={[0, 3.5, -4]}>
         <planeGeometry args={[9, 7]} />
-        <meshBasicMaterial color="#F5D98B" transparent opacity={0.3} toneMapped={false} />
+        <meshBasicMaterial map={gym} color="#404040" toneMapped={false} fog={false} />
       </mesh>
       <sprite position={[0, 2.6, -1.5]} scale={[14, 10, 1]}>
-        <spriteMaterial map={glow} blending={THREE.AdditiveBlending} depthWrite={false} opacity={0.5} />
+        <spriteMaterial map={glow} blending={THREE.AdditiveBlending} depthWrite={false} opacity={0.12} />
       </sprite>
       <pointLight ref={light} position={[0, 3, -1.2]} color="#f5c870" distance={30} decay={1.3} intensity={4} />
     </group>

@@ -54,7 +54,6 @@
 .hero {
   --p: 0;
   --pi: 0; /* 0 → 1 over the first scroll: the landing title gives way to the shot */
-  --flash: 0;
   position: relative;
   height: 100svh;
   overflow: hidden;
@@ -268,15 +267,6 @@
 }
 @keyframes hero-spin {
   to { rotate: 360deg; }
-}
-
-.hero__flash {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  /* same gradient as .realgym__light: the next scene begins exactly where this one ends */
-  background: radial-gradient(circle at 50% 45%, #fff6dc, #f5d98b 35%, #d4af37 70%, #6b5214 100%);
-  opacity: var(--flash);
 }
 
 @media (prefers-reduced-motion: reduce) {

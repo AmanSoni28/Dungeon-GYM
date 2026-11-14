@@ -16,12 +16,6 @@ describe("real-gym scroll journey", () => {
     expect(journeyPhases(2)).toEqual(journeyPhases(1));
   });
 
-  it("starts in the gate's golden light, which fades as you step in", () => {
-    expect(journeyVisuals(0).light).toBe(1);
-    expect(journeyVisuals(JOURNEY.entryEnd).light).toBe(0);
-    expect(journeyVisuals(0.5).light).toBe(0);
-  });
-
   it("is sharp and fully visible while exploring", () => {
     const v = journeyVisuals(0.4);
     expect(v.blur).toBe(0);

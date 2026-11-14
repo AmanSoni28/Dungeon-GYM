@@ -1,7 +1,7 @@
 // Scroll choreography of the "step inside the real gym" section. Pure + unit tested.
 //
 //   progress 0 ─ entry ─ 0.1 ─ explore ─ 0.85 ─ outro ─ 1
-//   entry:   golden light from the gate fades, camera settles from a push-in
+//   entry:   continues the gate's shot: the camera settles from a push-in, blur clears
 //   explore: one full 360° turn of the real gym (drag to look around)
 //   outro:   the camera eases forward, blurs and fades into the next homepage section
 
@@ -33,8 +33,6 @@ export function journeyVisuals(p: number) {
   const { entry, outro } = journeyPhases(p);
   const fade = ease(clamp01((outro - 0.35) / 0.65));
   return {
-    /** golden light carried over from the gate, fades out on entry */
-    light: 1 - ease(entry),
     /** zoom (multiplies the FOV): pushed-in on entry, then a gentle push forward on the way out */
     fovScale: (1 - 0.18 * (1 - ease(entry))) * (1 - 0.15 * ease(outro)),
     blur: (1 - ease(entry)) * 6 + ease(clamp01((outro - 0.3) / 0.7)) * 8,

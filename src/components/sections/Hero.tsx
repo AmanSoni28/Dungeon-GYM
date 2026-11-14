@@ -27,7 +27,7 @@ function Letters({ text }: { text: string }) {
 
 /**
  * Landing: the closed gate behind the DUNGEON wordmark. Scrolling swings the heavy iron doors open
- * and walks the visitor through them, into the golden light of the gym. Scrolling back closes them.
+ * and walks the visitor through them, into the real gym glimpsed behind them. Scrolling back closes them.
  */
 export function Hero() {
   const section = useRef<HTMLElement>(null);
@@ -52,10 +52,6 @@ export function Hero() {
           progress.current = p;
           el.style.setProperty("--p", p.toFixed(4));
           el.style.setProperty("--pi", Math.min(1, p / TITLE_OUT).toFixed(4));
-          // golden light floods in as the camera passes through the gate, and stays:
-          // the real-gym scene that follows starts from the same light (one continuous shot)
-          const t = Math.min(1, Math.max(0, (p - 0.8) / 0.17));
-          el.style.setProperty("--flash", (t * t * (3 - 2 * t)).toFixed(3));
         },
         onToggle: (s) => setActive(s.isActive || s.progress < 1),
       });
@@ -127,7 +123,6 @@ export function Hero() {
         </div>
       )}
 
-      <div className="hero__flash" aria-hidden />
     </section>
   );
 }
