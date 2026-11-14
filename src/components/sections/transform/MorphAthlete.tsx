@@ -240,7 +240,8 @@ function Athlete({ input, marks }: { input: BodyInput; marks: BodyMarks }) {
         const r = (scene.userData.tfRig as Rig | null | undefined) ?? buildRig(scene);
         scene.userData.tfRig = r;
         // compile his shaders in the background (parallel where the GPU allows) so the first frame doesn't stall
-        if (r) await gl.compileAsync(r.model, camera, world).catch(() => {});
+        // the rest of the scene too (lights, floor), or their first frame compiles synchronously mid-scroll
+        if (r) await Promise.all([gl.compileAsync(r.model, camera, world), gl.compileAsync(world, camera)]).catch(() => {});
         if (live) setRig(r);
       })
       .catch((e) => console.warn("[MorphAthlete] could not load the athlete", e));
@@ -248,6 +249,14 @@ function Athlete({ input, marks }: { input: BodyInput; marks: BodyMarks }) {
       live = false;
     };
   }, [gl, camera, world]);
+
+  // draw one frame now, while he is still off-screen (the canvas mounts at idle): the GPU driver finishes compiling
+  // his shaders and uploads his textures on first use, which otherwise froze his first visible frame for ~0.4 s
+  useEffect(() => {
+    if (!rig) return;
+    const t = window.setTimeout(() => gl.render(world, camera), 0);
+    return () => window.clearTimeout(t);
+  }, [rig, gl, world, camera]);
 
   const project = (p: THREE.Vector3, out: Pt) => {
     const v = p.project(camera);

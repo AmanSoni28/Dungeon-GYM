@@ -91,7 +91,7 @@ export function Transformations() {
   const { ref, inView, seen } = useInView<HTMLDivElement>("-15% 0px");
   // mount the 3D athlete a full screen early, so he is parsed and his shaders compiled before he is on screen
   const { ref: nearRef, seen: near } = useInView<HTMLElement>("100% 0px");
-  usePreloadAthleteWhenIdle(loadAthlete);
+  const warm = usePreloadAthleteWhenIdle(loadAthlete);
 
   const pv = useMotionValue(0);
   const anim = useRef<AnimationPlaybackControls | null>(null);
@@ -194,7 +194,7 @@ export function Transformations() {
           >
             <div className="tfx__glow" aria-hidden />
             <div className="tfx__scanlines" aria-hidden />
-            <div className="tfx__canvas">{near && <MorphAthlete input={body.current} marks={marks.current} running={inView} />}</div>
+            <div className="tfx__canvas">{(near || warm) && <MorphAthlete input={body.current} marks={marks.current} running={inView} />}</div>
             <div className="tfx__loading" aria-hidden>
               <span>Loading athlete</span>
             </div>

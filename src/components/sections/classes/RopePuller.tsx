@@ -389,13 +389,22 @@ function Puller({ rig, marks }: { rig: RopeRig; marks: HandMarks }) {
   useEffect(() => {
     if (!built) return;
     let live = true;
-    gl.compileAsync(built.model, camera, world)
+    // the rest of the scene too (lights, floor shadow), or their first frame compiles synchronously mid-scroll
+    Promise.all([gl.compileAsync(built.model, camera, world), gl.compileAsync(world, camera)])
       .catch(() => {})
       .then(() => live && setShown(true));
     return () => {
       live = false;
     };
   }, [built, gl, camera, world]);
+
+  // draw one frame now, while he is still off-screen (the canvas mounts at idle): the GPU driver finishes compiling
+  // his shaders and uploads his textures on first use, which otherwise froze his first visible frame for ~0.4 s
+  useEffect(() => {
+    if (!shown) return;
+    const t = window.setTimeout(() => gl.render(world, camera), 0);
+    return () => window.clearTimeout(t);
+  }, [shown, gl, world, camera]);
 
   // soft studio reflections for skin and fabric
   useEffect(() => {

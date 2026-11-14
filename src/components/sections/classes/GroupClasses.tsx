@@ -60,7 +60,7 @@ export function GroupClasses() {
   const { ref: viewRef, inView } = useInView<HTMLDivElement>("300px");
   // mount the 3D athlete a full screen early, so he is parsed and his shaders compiled before he is on screen
   const { ref: nearRef, seen } = useInView<HTMLDivElement>("100% 0px");
-  usePreloadAthleteWhenIdle(loadPuller);
+  const warm = usePreloadAthleteWhenIdle(loadPuller);
   const trigger = useRef<ScrollTrigger | null>(null);
 
   useEffect(() => {
@@ -296,7 +296,7 @@ export function GroupClasses() {
             className="classes__athlete"
             aria-hidden
           >
-            {seen && <RopePuller rig={rig.current} marks={marks.current} running={inView} />}
+            {(seen || warm) && <RopePuller rig={rig.current} marks={marks.current} running={inView} />}
           </div>
 
           <div ref={rail} className="classes__rail">

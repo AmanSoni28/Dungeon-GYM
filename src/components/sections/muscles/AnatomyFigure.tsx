@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useId } from "react";
+import { memo, useEffect, useId, useRef, useState } from "react";
 import type { MuscleId } from "@/data/site";
 import { DETAILS, PARTS, SILHOUETTE, VIEWBOX, type View } from "@/lib/muscles/anatomy";
 
@@ -20,6 +20,63 @@ function Both({ d, ...rest }: { d: string } & React.SVGProps<SVGPathElement>) {
 type Props = { view: View; active: MuscleId; hover: MuscleId | null };
 
 /**
+ * The rim glow and the sculpt filter (specular lighting + skin grain over the whole body) are very costly to paint:
+ * ~0.5 s of GPU time each time the figure is rasterised, which froze the scroll as Programs came into view and on
+ * every highlight fade. They never change, so each view is painted once, off-screen at idle, into a bitmap that
+ * replaces them; highlights and lighting stay live on top. Until then (or if baking fails) the live layers render.
+ */
+const baked = new Map<View, Promise<string>>();
+async function bake(svg: SVGSVGElement): Promise<string> {
+  const scale = Math.min(2, window.devicePixelRatio || 1);
+  const h = Math.round(Math.max(700, svg.getBoundingClientRect().height) * scale);
+  const w = Math.round((h * VIEWBOX.w) / VIEWBOX.h);
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  clone.querySelectorAll("[data-live]").forEach((e) => e.remove());
+  clone.querySelector("[mask]")?.removeAttribute("mask"); // the neck fade is applied once, live, over the bitmap
+  clone.setAttribute("width", String(w));
+  clone.setAttribute("height", String(h));
+  const img = new Image();
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(clone));
+  await img.decode();
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const g = c.getContext("2d");
+  if (!g) throw new Error("no 2d canvas");
+  g.drawImage(img, 0, 0, w, h);
+  const blob = await new Promise<Blob | null>((r) => c.toBlob(r, "image/webp", 0.92));
+  if (!blob) throw new Error("toBlob failed");
+  return URL.createObjectURL(blob);
+}
+
+function useBakedBody(view: View) {
+  const ref = useRef<SVGSVGElement>(null);
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const svg = ref.current;
+    if (!svg || typeof HTMLCanvasElement === "undefined" || typeof XMLSerializer === "undefined") return;
+    let live = true;
+    const run = () => {
+      let job = baked.get(view);
+      if (!job) {
+        job = bake(svg);
+        baked.set(view, job);
+        job.catch(() => baked.delete(view));
+      }
+      job.then((u) => live && setUrl(u)).catch(() => {}); // keep the live layers
+    };
+    const ric = typeof window.requestIdleCallback === "function";
+    const handle = ric ? window.requestIdleCallback(run, { timeout: 3000 }) : window.setTimeout(run, 500);
+    return () => {
+      live = false;
+      if (ric) window.cancelIdleCallback(handle);
+      else window.clearTimeout(handle);
+    };
+  }, [view]);
+  return { ref, url };
+}
+
+/**
  * One face (front or back) of the anatomical athlete.
  * Layers: gold rim glow → sculpted body (specular-lit, skin grain) → gold highlight of the
  * active group → hover sheen → cinematic key/fill lighting and head/feet falloff.
@@ -30,9 +87,11 @@ function AnatomyFigureImpl({ view, active, hover }: Props) {
   const url = (name: string) => `url(#${id(name)})`;
   const parts = PARTS[view];
   const tones = { hair: "#120a06", shadow: "#1d100a", plane: "#8a5a3a" } as const;
+  const { ref, url: body } = useBakedBody(view);
 
   return (
     <svg
+      ref={ref}
       className="af"
       viewBox={`0 0 ${VIEWBOX.w} ${VIEWBOX.h}`}
       preserveAspectRatio="xMidYMid meet"
@@ -100,28 +159,38 @@ function AnatomyFigureImpl({ view, active, hover }: Props) {
 
       <g mask={url("headless")}>
 
-      {/* golden rim light around the body */}
-      <g className="af__rim" filter={url("blur")}>
-        <Both d={SILHOUETTE} fill="#d4af37" />
-      </g>
+      {body ? (
+        <>
+          <image href={body} width={VIEWBOX.w} height={VIEWBOX.h} preserveAspectRatio="none" />
+          {/* invisible hit areas: hover / tap a muscle */}
+          {parts.map((p) => p.group && <Both key={p.id} d={p.d} fill="transparent" data-group={p.group} className="af__m" />)}
+        </>
+      ) : (
+        <>
+          {/* golden rim light around the body */}
+          <g className="af__rim" opacity={0.32} filter={url("blur")}>
+            <Both d={SILHOUETTE} fill="#d4af37" />
+          </g>
 
-      {/* the sculpted body */}
-      <g filter={url("sculpt")}>
-        <Both d={SILHOUETTE} fill={url("skin")} />
-        {DETAILS[view].map((p) => (
-          <Both key={p.id} d={p.d} fill={tones[p.tone]} opacity={p.tone === "plane" ? 0.55 : 0.8} />
-        ))}
-        {parts.map((p) => (
-          <Both key={p.id} d={p.d} fill={url("muscle")} data-group={p.group ?? undefined} className={p.group ? "af__m" : undefined} />
-        ))}
-      </g>
+          {/* the sculpted body */}
+          <g filter={url("sculpt")}>
+            <Both d={SILHOUETTE} fill={url("skin")} />
+            {DETAILS[view].map((p) => (
+              <Both key={p.id} d={p.d} fill={tones[p.tone]} opacity={p.tone === "plane" ? 0.55 : 0.8} />
+            ))}
+            {parts.map((p) => (
+              <Both key={p.id} d={p.d} fill={url("muscle")} data-group={p.group ?? undefined} className={p.group ? "af__m" : undefined} />
+            ))}
+          </g>
+        </>
+      )}
 
       {/* gold highlight per group, cross-faded by CSS */}
       {GROUPS.map((g) => {
         const gp = parts.filter((p) => p.group === g);
         if (!gp.length) return null;
         return (
-          <g key={g} className={`af__hl${g === active ? " is-on" : ""}${g === hover && g !== active ? " is-hover" : ""}`}>
+          <g key={g} data-live="" className={`af__hl${g === active ? " is-on" : ""}${g === hover && g !== active ? " is-hover" : ""}`}>
             <g className="af__glow" filter={url("glow")}>
               {gp.map((p) => (
                 <Both key={p.id} d={p.d} fill="#d4af37" />
@@ -142,7 +211,7 @@ function AnatomyFigureImpl({ view, active, hover }: Props) {
       })}
 
       {/* cinematic lighting */}
-      <g clipPath={url("clip")} pointerEvents="none">
+      <g data-live="" clipPath={url("clip")} pointerEvents="none">
         <rect width={VIEWBOX.w} height={VIEWBOX.h} fill={url("key")} />
         <rect width={VIEWBOX.w} height={VIEWBOX.h} fill={url("falloff")} />
       </g>
