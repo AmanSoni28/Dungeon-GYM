@@ -1,22 +1,20 @@
 // "Rope pull" entrance of the Group Classes rail. Pure + deterministic (unit tested).
 //
-// An athlete hauls a battle rope, one stroke per class (drive: lean back, elbows back / reach: re-grip).
+// Two hands haul a heavy rope, one stroke per class (drive: grip hard and pull back / reach: ease the grip, re-set).
 // The class cards are threaded on the rope; each drive hauls exactly one card-pitch of rope, bringing
 // the next card into the centre of the screen. During the re-grip the rope rests and the centred card
-// holds the spotlight. Cards already shown are hauled on toward the athlete and fade behind him.
+// holds the spotlight. Cards already shown are hauled on toward the hands and fade out.
 //
 //   −∞ ── ready ── 0 ── prelude ── strokes × (drive | reach) ── done
 //
 // The haul is scrubbed by the visitor's scroll (the section pins while it plays; scrolling back reverses it).
-
-import type { Pose } from "@/lib/intro/choreography";
 
 export const PULL = {
   /** strokes: one per class card */
   strokes: 6,
   /** seconds per stroke, and the share of it spent driving (the rope only moves on the drive) */
   stroke: 0.9,
-  drive: 0.55,
+  drive: 0.62,
   /** grip + settle into the lean before the first stroke */
   prelude: 0.55,
 };
@@ -36,7 +34,7 @@ export type PullState = {
   hauled: number;
   /** rope tension 0..1 (slack → taut): drives sag and vibration */
   tension: number;
-  /** athlete pose blend 0..1 (0 = reaching forward, 1 = fully driven back) */
+  /** hands pose blend 0..1 (0 = reaching forward, 1 = fully driven back) */
   drive: number;
   done: boolean;
 };
@@ -46,16 +44,18 @@ export function pullAt(t: number, total: number): PullState {
   if (t < 0) return { hauled: 0, tension: 0.12, drive: 0, done: false };
   if (t < PULL.prelude) {
     const k = smooth(t / PULL.prelude);
-    return { hauled: 0, tension: 0.12 + 0.38 * k, drive: 0.12 * k, done: false };
+    return { hauled: 0, tension: 0.12 + 0.2 * k, drive: 0, done: false }; // the hands settle their grip
   }
   const per = total / PULL.strokes;
   const s = t - PULL.prelude;
   const k = Math.floor(s / PULL.stroke);
-  if (k >= PULL.strokes) return { hauled: total, tension: 0.5, drive: 0.32, done: true };
+  if (k >= PULL.strokes) return { hauled: total, tension: 0.32, drive: 0.32, done: true };
   const u = (s - k * PULL.stroke) / PULL.stroke;
   if (u < PULL.drive) {
     const x = u / PULL.drive;
-    return { hauled: per * (k + drivePower(x)), tension: 0.82 + 0.18 * Math.sin(Math.PI * x), drive: smooth(x), done: false };
+    // the slack is taken up in the first moment of the drive, then the rope stays bar-tight
+    const tension = 0.32 + 0.5 * smooth(x * 4) + 0.18 * Math.sin(Math.PI * x);
+    return { hauled: per * (k + drivePower(x)), tension, drive: smooth(x), done: false };
   }
   const x = (u - PULL.drive) / (1 - PULL.drive);
   // re-grip: the rope rests, slack comes back into it as the hands travel forward
@@ -95,10 +95,20 @@ export function cardLook(d: number) {
   const a = Math.abs(d);
   const f = a >= 1 ? 0 : 1 - a * a * (3 - 2 * a);
   const opacity = d < 0 ? clamp01(1 - (-d - 0.35) / 0.85) : 1 - 0.38 * clamp01(d) - 0.62 * clamp01(d - 2);
-  return { focus: f, scale: 0.8 + 0.2 * f, opacity, dim: 1 - f };
+  return {
+    focus: f,
+    scale: 0.8 + 0.2 * f,
+    opacity,
+    dim: 1 - f,
+    /** 3D: off-centre cards turn in toward the spotlight (degrees) and sit back in depth (px) */
+    turn: -Math.sign(d) * 18 * smooth(a),
+    depth: -140 * smooth(a / 1.5),
+    /** the photo wipes in as the card is hauled up to the spotlight (0 = hidden, 1 = shown) */
+    reveal: smooth((1.25 - d) / 0.95),
+  };
 }
 
-/** Where the centred card sits (px): the middle of the screen, but never under the athlete. */
+/** Where the centred card sits (px): the middle of the screen, but never under the hands. */
 export function focusX(stageWidth: number, athleteRight: number, cardWidth: number, gap = 16) {
   const want = Math.max(stageWidth / 2, athleteRight + cardWidth / 2 + gap);
   return Math.min(want, stageWidth - cardWidth / 2 - 8);
@@ -173,32 +183,48 @@ export function ropePath(points: RopePoint[], tension: number, wobble: (i: numbe
   return d;
 }
 
-// ── Athlete poses (side-on, facing the cards) ──
-export const ROPE_POSES: Record<"reach" | "drive", Pose> = {
-  // hips back in an athletic squat, arms long toward the rope, eyes on the cards
-  reach: { pelvis: 0.22, spine: 0.12, neck: -0.2, legHip: -0.78, knee: 0.98, armFlex: -1.45, armAbd: 0.06, elbow: -0.12 },
-  // lean back into the rope, elbows driven past the ribs, hands at the chest
-  drive: { pelvis: -0.14, spine: -0.18, neck: 0.04, legHip: -0.4, knee: 0.64, armFlex: -0.5, armAbd: 0.1, elbow: -1.8 },
+// ── The winch ──
+/**
+ * The machine hauling the rope: a geared drum, seen side-on, in its own 240 x 300 unit box. The rope comes off
+ * the top of the coil wound on the drum and runs right to the cards; as rope is hauled in the drum turns and
+ * the coil thickens. A pawl rides the ratchet teeth on the flange.
+ */
+export const WINCH = {
+  w: 240,
+  h: 300,
+  /** drum centre */
+  cx: 120,
+  cy: 118,
+  /** coil radius: bare drum (nothing hauled) → full haul */
+  coil0: 46,
+  coil1: 72,
+  /** ratchet teeth on the flange */
+  teeth: 36,
+  /** rope thickness in winch units */
+  rope: 15,
+  /** where the rope line sits (winch units from the top): the top of a half-wound coil */
+  ropeY: 118 - 59,
 };
 
-export function ropePose(drive: number, breath = 0): Pose {
-  const k = clamp01(drive);
-  const r = ROPE_POSES.reach;
-  const d = ROPE_POSES.drive;
-  const mix = (a: number, b: number) => a + (b - a) * k;
-  return {
-    pelvis: mix(r.pelvis, d.pelvis),
-    spine: mix(r.spine, d.spine) - breath * 0.015,
-    neck: mix(r.neck, d.neck),
-    legHip: mix(r.legHip, d.legHip),
-    knee: mix(r.knee, d.knee),
-    armFlex: mix(r.armFlex, d.armFlex),
-    armAbd: mix(r.armAbd, d.armAbd),
-    elbow: mix(r.elbow, d.elbow),
-  };
+/**
+ * Winch state for `hauled` px of rope in (of `total`), with `scale` px per winch unit: the drum angle (degrees)
+ * follows the rope exactly (arc length = rope hauled), the coil radius grows with the haul, and the pawl lifts
+ * as each tooth passes under it, then drops (the click).
+ */
+export function winchAt(hauled: number, total: number, scale: number) {
+  const f = total > 0 ? clamp01(hauled / total) : 0;
+  const coil = WINCH.coil0 + (WINCH.coil1 - WINCH.coil0) * f;
+  // integrate rope over the growing radius: angle = ∫ dh / r(h), exact for a linear r(h)
+  const dr = (WINCH.coil1 - WINCH.coil0) * scale;
+  const r0 = WINCH.coil0 * scale;
+  const rad = dr > 1e-9 && total > 0 ? (total / dr) * Math.log((r0 + dr * f) / r0) : r0 > 0 ? hauled / r0 : 0;
+  const angle = (rad * 180) / Math.PI;
+  const step = 360 / WINCH.teeth;
+  const phase = ((angle % step) + step) % step / step; // 0 → 1 as a tooth passes
+  return { angle, coil, pawl: phase < 0.85 ? phase / 0.85 : 1 - (phase - 0.85) / 0.15 };
 }
 
-/** Shared between the DOM rope/cards loop and the 3D athlete (written every frame, no React state). */
+/** The haul's live state, shared by the per-frame loop (written every frame, no React state). */
 export type RopeRig = {
   /** seconds into the haul (smoothed toward `goal`, which the scroll position sets) */
   t: number;
@@ -207,14 +233,76 @@ export type RopeRig = {
   reduced: boolean;
   /** total rope to haul (px), from the layout */
   total: number;
-  /** athlete's hands on the canvas (px, canvas space) and their resting height */
-  hand: { x: number; y: number; ready: boolean; restY: number };
 };
 
-export const createRopeRig = (): RopeRig => ({ t: 0, goal: 0, reduced: false, total: 1, hand: { x: 0, y: 0, ready: false, restY: 0 } });
+export const createRopeRig = (): RopeRig => ({ t: 0, goal: 0, reduced: false, total: 1 });
 
-/** Athlete drive + rope tension right now. */
+/** Hands drive + rope tension right now. */
 export function rigState(rig: RopeRig): PullState {
   if (rig.reduced) return { hauled: rig.total, tension: 0.5, drive: 0.32, done: true };
   return pullAt(rig.t, rig.total);
 }
+
+// ── The athlete ──
+/**
+ * Hand-over-hand haul, one stroke per card. On each drive one hand (alternating, right first) pulls the rope from
+ * out in front back to the hip while the other slides forward along it to re-grip; in the rest both hands hold.
+ * Hand positions run 0 (out in front) → 1 (back at the hip). `lean` (0..1) is how far he hangs back on the rope,
+ * `sit` (0..1) how deep he sinks into his legs, `grip` (0..1) how tightly each fist is closed.
+ */
+export type HaulPose = { right: number; left: number; lean: number; sit: number; gripR: number; gripL: number };
+
+export function haulPose(t: number): HaulPose {
+  if (t < 0) return { right: 0, left: 0.85, lean: 0, sit: 0, gripR: 0.6, gripL: 0.6 };
+  if (t < PULL.prelude) {
+    // take the grip and settle down into the stance
+    const k = smooth(t / PULL.prelude);
+    return { right: 0, left: 0.85 + 0.15 * k, lean: 0.35 * k, sit: 0.4 * k, gripR: 0.6 + 0.4 * k, gripL: 0.6 + 0.4 * k };
+  }
+  const s = t - PULL.prelude;
+  const k = Math.min(PULL.strokes - 1, Math.floor(s / PULL.stroke));
+  const u = Math.min(1, (s - k * PULL.stroke) / PULL.stroke);
+  let pull: number; // the hand driving this stroke
+  let slide: number; // the other hand, travelling forward
+  let effort: number;
+  let open = 0;
+  if (u < PULL.drive) {
+    const x = u / PULL.drive;
+    pull = drivePower(x);
+    slide = 1 - smooth(x);
+    effort = 0.35 + 0.65 * smooth(x);
+    open = Math.sin(Math.PI * x) * 0.75; // the sliding hand loosens to run along the rope
+  } else {
+    const x = (u - PULL.drive) / (1 - PULL.drive);
+    pull = 1;
+    slide = 0;
+    effort = 1 - 0.65 * smooth(x);
+  }
+  const rightPulls = k % 2 === 0;
+  return {
+    right: rightPulls ? pull : slide,
+    left: rightPulls ? slide : pull,
+    lean: effort,
+    sit: 0.4 + 0.6 * effort,
+    gripR: rightPulls ? 1 : 1 - open,
+    gripL: rightPulls ? 1 - open : 1,
+  };
+}
+
+/** Where the athlete's hands and the rope's tail are on screen (written by the 3D view every frame). */
+export type HandMarks = {
+  ready: boolean;
+  front: RopePoint;
+  back: RopePoint;
+  /** where the hauled rope meets the floor behind him, and the floor line */
+  tail: RopePoint;
+  /** the rope height at rest (card connectors hang on this line) */
+  restY: number;
+};
+export const createHandMarks = (): HandMarks => ({
+  ready: false,
+  front: { x: 0, y: 0 },
+  back: { x: 0, y: 0 },
+  tail: { x: 0, y: 0 },
+  restY: 0,
+});

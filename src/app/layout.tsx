@@ -4,6 +4,8 @@ import "lenis/dist/lenis.css";
 import "@/styles/globals.css";
 import "@/styles/chrome.css";
 import "@/styles/sections-gym.css";
+import "@/styles/muscle-atlas.css";
+import "@/styles/transformations.css";
 import "@/styles/sections-spa.css";
 import "@/styles/sections-end.css";
 import { AppProvider } from "@/components/providers/AppProvider";

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { footPosition } from "@/lib/intro/choreography";
 import {
   cardLook,
   carouselPos,
@@ -10,8 +9,8 @@ import {
   pullDuration,
   rigState,
   ropePath,
-  ropePose,
-  ROPE_POSES,
+  winchAt,
+  WINCH,
   springStep,
   SWING,
   swingStep,
@@ -163,19 +162,43 @@ describe("rope path", () => {
   });
 });
 
-describe("athlete", () => {
-  it("keeps the feet planted through the whole pull", () => {
-    for (let k = 0; k <= 1; k += 0.1) {
-      const f = footPosition(ropePose(k));
-      expect(Math.abs(f.y - 0.06)).toBeLessThan(1e-6);
-      expect(Math.abs(f.z)).toBeLessThan(1e-6);
+describe("winch", () => {
+  const total = 2000;
+  const scale = 0.8;
+
+  it("starts still, with a bare coil, and winds the coil up as the rope comes in", () => {
+    expect(winchAt(0, total, scale)).toMatchObject({ angle: 0, coil: WINCH.coil0 });
+    expect(winchAt(total, total, scale).coil).toBe(WINCH.coil1);
+    expect(winchAt(total / 2, total, scale).coil).toBeCloseTo((WINCH.coil0 + WINCH.coil1) / 2, 6);
+  });
+
+  it("turns the drum exactly as fast as the rope reels in (arc length = rope hauled)", () => {
+    const h = 30;
+    const a = winchAt(h, total, scale).angle;
+    const r = winchAt(h, total, scale).coil * scale;
+    expect((a * Math.PI) / 180).toBeCloseTo(h / r, 1);
+    let prev = -1;
+    for (let x = 0; x <= total; x += 10) {
+      const now = winchAt(x, total, scale).angle;
+      expect(now).toBeGreaterThan(prev);
+      prev = now;
     }
   });
 
-  it("drives the elbows back and leans away from the rope", () => {
-    expect(ROPE_POSES.drive.elbow).toBeLessThan(ROPE_POSES.reach.elbow - 1);
-    expect(ROPE_POSES.drive.pelvis).toBeLessThan(0);
-    expect(ROPE_POSES.reach.armFlex).toBeLessThan(-1.2); // arms long toward the rope
+  it("turns slower as the coil grows (a fatter coil takes in more rope per turn)", () => {
+    const early = winchAt(100, total, scale).angle - winchAt(0, total, scale).angle;
+    const late = winchAt(total, total, scale).angle - winchAt(total - 100, total, scale).angle;
+    expect(late).toBeLessThan(early);
+  });
+
+  it("lifts the pawl over each tooth and drops it again", () => {
+    const step = 360 / WINCH.teeth;
+    const pawls = [];
+    for (let x = 0; x <= 200; x += 0.5) pawls.push(winchAt(x, total, scale));
+    expect(Math.max(...pawls.map((p) => p.pawl))).toBeGreaterThan(0.95);
+    expect(Math.min(...pawls.map((p) => p.pawl))).toBeLessThan(0.05);
+    expect(pawls.every((p) => p.pawl >= 0 && p.pawl <= 1)).toBe(true);
+    expect(step).toBe(10);
   });
 
   it("is already in place for reduced motion", () => {

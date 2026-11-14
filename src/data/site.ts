@@ -8,11 +8,12 @@ export const brand = {
   full: "Dungeon Gym & Spa",
   tagline: "Forge Your Body. Restore Your Soul.",
   currency: "₹",
-  phone: "+91 98765 43210",
-  whatsapp: "919876543210", // digits only, used for wa.me link
+  phone: "+91 81718 88777",
+  whatsapp: "918171888777", // digits only, used for wa.me link
   email: "hello@dungeongym.in",
-  address: "21 Iron Street, Sector 5, Your City",
-  mapsUrl: "https://maps.google.com/?q=Dungeon+Gym+and+Spa",
+  address: "14, Balbir Rd, Dalanwala, Dehradun, Uttarakhand 248001",
+  addressLines: ["14, Balbir Rd, Dalanwala", "Dehradun, Uttarakhand 248001"],
+  mapsUrl: "https://www.google.com/maps/search/?api=1&query=Dungeon+Gym+%26+Spa%2C+14+Balbir+Rd%2C+Dalanwala%2C+Dehradun%2C+Uttarakhand+248001",
   instagram: "https://instagram.com/",
   hours: [
     { day: "Mon – Sat", time: "5:00 AM – 11:00 PM" },
@@ -29,16 +30,6 @@ export const nav = [
   { label: "Plans", href: "#plans" },
   { label: "Contact", href: "#contact" },
 ];
-
-export const stats = [
-  { value: 1500, suffix: "+", label: "Warriors Trained" },
-  { value: 25, suffix: "", label: "Elite Trainers" },
-  { value: 10, suffix: " yrs", label: "Of Forging" },
-  { value: 24, suffix: "/7", label: "Access" },
-];
-
-export const manifesto =
-  "This is not a gym. This is where weakness goes to die, where iron meets will, and where every drop of sweat is forged into strength.";
 
 // ── 360 tour zones (procedural 3D hall). Add `image` (equirectangular jpg in /public) to use a real 360 photo instead.
 export type TourZone = {
@@ -225,45 +216,9 @@ export const classes = [
   { name: "Zumba", tag: "Rhythm", desc: "Dance cardio with dungeon-level energy.", image: "/images/classes/zumba.webp" },
 ];
 
-export const gallery = [
-  { src: "/images/gallery/dark-hall.webp", alt: "The main training hall at night", label: "The Hall" },
-  { src: "/images/gallery/deadlift.webp", alt: "Athlete pulling a heavy deadlift", label: "Pull Heavy" },
-  { src: "/images/gallery/iron-floor.webp", alt: "Rows of dumbbells on the iron floor", label: "Iron Pit" },
-  { src: "/images/gallery/grip.webp", alt: "Chalked hand gripping a loaded barbell", label: "Grip" },
-  { src: "/images/gallery/warehouse.webp", alt: "Industrial functional training zone", label: "Combat Zone" },
-  { src: "/images/gallery/dumbbells.webp", alt: "Athlete lifting dumbbells from the rack", label: "Rack Up" },
-  { src: "/images/gallery/shadow-lift.webp", alt: "Lifter in dramatic low light", label: "In the Dark" },
-];
-
 export const backgrounds = {
-  creed: "/images/bg/creed.webp",
   pass: "/images/bg/pass.webp",
 };
-
-// ── Equipment showcase (procedural 3D models)
-export const equipment = [
-  {
-    id: "dumbbell",
-    name: "Hex Dumbbell",
-    spec: "2.5 – 60 kg",
-    desc: "Knurled chrome handles and rubber-coated hex heads. The backbone of the Iron Pit.",
-    muscles: ["Chest", "Arms", "Shoulders"],
-  },
-  {
-    id: "kettlebell",
-    name: "Cast Kettlebell",
-    spec: "4 – 48 kg",
-    desc: "Single-piece cast iron for swings, snatches and Turkish get-ups.",
-    muscles: ["Posterior Chain", "Core", "Grip"],
-  },
-  {
-    id: "plate",
-    name: "Olympic Plate",
-    spec: "1.25 – 25 kg",
-    desc: "Calibrated bumper plates for deadlifts and Olympic lifting.",
-    muscles: ["Legs", "Back", "Full Body"],
-  },
-] as const;
 
 // ── Trainers. Add `image: "/trainers/name.jpg"` to show a real photo.
 export type Trainer = {
@@ -358,20 +313,47 @@ export const ranks = [
   { name: "Dungeon Lord", level: "IV", req: "365 check-ins", perk: "Lifetime price lock + Hall of Fame", glyph: "♛" },
 ];
 
-export const transformations = [
+type Metrics = { weight: number; fat: number; strength: number };
+export type Transformation = {
+  name: string;
+  months: number;
+  headline: string;
+  quote: string;
+  before: Metrics;
+  after: Metrics;
+  /** first is month 0, last is the final month */
+  milestones: { month: number; title: string; text: string }[];
+};
+
+export const transformations: Transformation[] = [
   {
     name: "Rahul S.",
     months: 6,
+    headline: "−20 kg in 6 months",
     quote: "I walked in at 98 kg and couldn't do a pull-up. Six months in the Dungeon changed everything.",
     before: { weight: 98, fat: 32, strength: 40 },
     after: { weight: 78, fat: 16, strength: 100 },
+    milestones: [
+      { month: 0, title: "Day one", text: "98 kg, 32% body fat and zero pull-ups. Full assessment and a plan built around his week." },
+      { month: 1, title: "Habits first", text: "Three sessions a week, form drills and a protein target he could actually hit." },
+      { month: 2, title: "The scale moves", text: "Down 10 kg. Back pain gone, energy up, first heavy squat sessions." },
+      { month: 4, title: "First pull-up", text: "One clean rep in front of the whole floor. Strength score more than doubled." },
+      { month: 6, title: "Today", text: "78 kg at 16% body fat, deadlifting one and a half times his bodyweight." },
+    ],
   },
   {
-    name: "Priya M.",
-    months: 4,
-    quote: "Sara's HIIT plus the spa recovery days made my plan feel sustainable for the first time.",
-    before: { weight: 72, fat: 30, strength: 35 },
-    after: { weight: 61, fat: 21, strength: 80 },
+    name: "Aditya K.",
+    months: 5,
+    headline: "+10 kg of muscle in 5 months",
+    quote: "I was the skinny guy who avoided the weights room. Arjun's program put real muscle on my frame.",
+    before: { weight: 64, fat: 18, strength: 30 },
+    after: { weight: 74, fat: 14, strength: 88 },
+    milestones: [
+      { month: 0, title: "Day one", text: "64 kg and nervous under a bar. Coach Arjun starts him on the big four lifts." },
+      { month: 1, title: "Eat to grow", text: "A surplus he could keep up, and progressive overload every single week." },
+      { month: 3, title: "Bodyweight bench", text: "Benched 64 kg for a clean set of five. Shirts started fitting differently." },
+      { month: 5, title: "Today", text: "74 kg at 14% body fat. Ten kilos heavier and leaner than when he started." },
+    ],
   },
 ];
 

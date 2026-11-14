@@ -160,7 +160,7 @@ body::after {
 
 .section {
   position: relative;
-  padding-block: clamp(90px, 14vw, 180px);
+  padding-block: clamp(64px, 8vw, 112px);
 }
 
 .eyebrow {
@@ -214,7 +214,7 @@ body::after {
 .section-head {
   display: grid;
   gap: 22px;
-  margin-bottom: clamp(48px, 7vw, 90px);
+  margin-bottom: clamp(36px, 5vw, 64px);
 
   &.is-center {
     justify-items: center;
@@ -232,6 +232,21 @@ body::after {
 .split-word {
   display: inline-block;
   will-change: transform;
+}
+/* background-clip: text on the line can't reach words that are their own (transformed) layers — they'd vanish.
+   Paint the gold on each word instead, sized to the whole line so the shimmer still reads as one sweep. */
+.split-line.gold-text {
+  background: none;
+  animation: none;
+  color: var(--gold);
+}
+.split-line.gold-text .split-word {
+  background: linear-gradient(100deg, var(--gold-deep), var(--gold-bright) 40%, var(--gold) 60%, var(--gold-deep));
+  background-size: 400% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 6s linear infinite;
 }
 
 /* ── Buttons ─────────────────────────────────────── */

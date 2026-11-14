@@ -23,9 +23,8 @@ const DRAG_Y = 0.0026;
 const KEY_STEP = 0.08;
 
 /**
- * Scene 2 + 3 of the entrance: step through the gate into the REAL Dungeon Gym, turn through the 360°,
- * then a spotlight finds an athlete on the bench press and the camera flies between his chest and the bar
- * into the rest of the homepage.
+ * Scene 2 of the entrance: step through the gate into the REAL Dungeon Gym, turn through the 360°,
+ * then ease forward and fade into the rest of the homepage.
  */
 export function RealGym({ views = gymViews, forceMode }: { views?: GymView[]; forceMode?: Mode }) {
   const section = useRef<HTMLElement>(null);
@@ -60,9 +59,6 @@ export function RealGym({ views = gymViews, forceMode }: { views?: GymView[]; fo
       // extra compositing pass every frame (and can freeze the canvas on some GPUs)
       el.style.setProperty("--stage-filter", v.blur > 0.05 ? `blur(${v.blur.toFixed(2)}px)` : "none");
       el.style.setProperty("--fade", v.fade.toFixed(3));
-      el.style.setProperty("--caption", v.caption.toFixed(3));
-      el.style.setProperty("--rush", v.rush.toFixed(3));
-      el.style.setProperty("--reveal", v.reveal.toFixed(3));
       el.classList.toggle("is-prompt", v.prompt > 0.05);
     };
     apply(0);
@@ -73,7 +69,7 @@ export function RealGym({ views = gymViews, forceMode }: { views?: GymView[]; fo
       ScrollTrigger.create({
         trigger: el,
         start: "top top",
-        end: "+=440%",
+        end: "+=260%",
         pin: true,
         scrub: true,
         onUpdate: (s) => apply(s.progress),
@@ -204,24 +200,11 @@ export function RealGym({ views = gymViews, forceMode }: { views?: GymView[]; fo
 
       {/* outside .realgym__ui on purpose: it has its own fade and must stay up while the camera starts moving */}
       <div className="realgym__prompt">
-        <button type="button" className="realgym__enter" onClick={() => scrollToTarget("#about")} data-cursor="">
+        <button type="button" className="realgym__enter" onClick={() => scrollToTarget("#tour")} data-cursor="">
           Enter Dungeon
         </button>
         <span>Scroll to continue</span>
       </div>
-
-      {/* bench-press finale: chapter caption, then a speed rush as the camera threads the bar */}
-      <div className="realgym__caption" aria-hidden>
-        <span className="realgym__chapter">
-          <i />
-          Chapter II · The Press
-        </span>
-        <p className="realgym__line">
-          Earn the <em>iron.</em>
-        </p>
-        <span className="realgym__sub">Every rep is forged here</span>
-      </div>
-      <div className="realgym__rush" aria-hidden />
 
       <div className="realgym__fade" aria-hidden />
     </section>

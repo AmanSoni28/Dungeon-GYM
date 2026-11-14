@@ -4,12 +4,9 @@ import { CinematicIntro } from "@/components/intro/CinematicIntro";
 import { Navbar } from "@/components/chrome/Navbar";
 import { Marquee, ScrollProgress, WhatsAppButton } from "@/components/chrome/Extras";
 import { Hero } from "@/components/sections/Hero";
-import { Manifesto } from "@/components/sections/Manifesto";
 import { RealGym } from "@/components/sections/RealGym";
-import { Gallery } from "@/components/sections/Gallery";
 import { Tour } from "@/components/sections/Tour";
 import { Programs } from "@/components/sections/Programs";
-import { Equipment } from "@/components/sections/Equipment";
 import { Trainers } from "@/components/sections/Trainers";
 import { Ranks } from "@/components/sections/Ranks";
 import { Transformations } from "@/components/sections/Transformations";
@@ -20,8 +17,9 @@ import { LiveStatus } from "@/components/sections/LiveStatus";
 import { Testimonials } from "@/components/sections/Testimonials";
 import { FreePass } from "@/components/sections/FreePass";
 import { Footer } from "@/components/sections/Footer";
+import { ScrollChoreography } from "@/components/chrome/ScrollChoreography";
 
-// Story: Forge → Gate → Creed → Tour → Train → Arsenal → Coaches → Ranks → Results
+// Story: Forge → Gate → Tour → Train → Coaches → Ranks → Results
 //        → 🔥 Fire to Water 💧 → Spa → Plans → Live → Reviews → Free Pass → Footer
 export default function Home() {
   return (
@@ -36,12 +34,9 @@ export default function Home() {
       <main>
         <Hero />
         <RealGym />
-        <Manifesto />
-        <Gallery />
         <Marquee items={["Strength", "Discipline", "Iron", "Sweat", "Glory", "Recovery"]} />
         <Tour />
         <Programs />
-        <Equipment />
         <Trainers />
         <Ranks />
         <Transformations />
@@ -55,6 +50,7 @@ export default function Home() {
       </main>
 
       <Footer />
+      <ScrollChoreography />
     </>
   );
 }
