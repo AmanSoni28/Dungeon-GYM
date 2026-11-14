@@ -30,8 +30,10 @@ describe("real-gym scroll journey", () => {
     expect(end360.blur).toBe(0);
     expect(end360.ui).toBe(1);
     const end = journeyVisuals(1);
-    expect(end.fade).toBe(1);
-    expect(end.gym).toBe(0);
+    // dims under the next section, never a black frame
+    expect(end.fade).toBeGreaterThan(0.3);
+    expect(end.fade).toBeLessThan(0.6);
+    expect(end.gym).toBeGreaterThan(0.4);
     expect(end.ui).toBe(0);
     expect(end.blur).toBeGreaterThan(7);
     expect(end.fovScale).toBeLessThan(0.9);

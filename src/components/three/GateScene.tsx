@@ -16,18 +16,12 @@ type Smash = React.MutableRefObject<SmashClock>;
 
 const GATE_Z = -16;
 
-// The real gym behind the gate: the same 360° photo the next section opens on, cropped to its start view
-// (yaw 0 → u 0.25 after the viewer's flip), so walking through the doors lands exactly where the viewer begins.
-const GYM_GLIMPSE = { src: "/images/gym/gym-360.jpg", u: 0.25, w: 0.135, h: 0.21 };
-function useGymGlimpse() {
-  return useMemo(() => {
-    const tex = new THREE.TextureLoader().load(GYM_GLIMPSE.src);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.repeat.set(GYM_GLIMPSE.w, GYM_GLIMPSE.h);
-    tex.offset.set(GYM_GLIMPSE.u - GYM_GLIMPSE.w / 2, 0.5 - GYM_GLIMPSE.h / 2);
-    return tex;
-  }, []);
-}
+// Behind the gate: no photo, just light. A warm portal that brightens as the doors open and blooms
+// to white-gold as the camera walks through it; the next section is revealed out of that glow.
+const PORTAL = { w: 7.4, h: 5.83, y: 0.17 + 5.83 / 2, z: -5.5 }; // z is local to the gate group
+const PORTAL_DIM = new THREE.Color("#2a1a08");
+const PORTAL_HOT = new THREE.Color("#fff1cf");
+
 const IRON = { color: "#2b2622", metalness: 0.85, roughness: 0.42 };
 
 /* ── Stone corridor with gothic arches ─────────────────── */
@@ -313,8 +307,9 @@ function Gate({ progress, smash }: { progress: Prog; smash: Smash }) {
   const left = useRef<THREE.Group>(null);
   const right = useRef<THREE.Group>(null);
   const light = useRef<THREE.PointLight>(null);
+  const halo = useRef<THREE.SpriteMaterial>(null);
   const portal = useRef<THREE.Mesh>(null);
-  const gym = useGymGlimpse();
+  const core = useRef<THREE.SpriteMaterial>(null);
   const mats = useGateMats();
   const glow = useMemo(() => makeGlowTexture("rgba(255,240,205,1)", "rgba(212,175,55,0)"), []);
   const signMat = useMemo(() => {
@@ -359,11 +354,16 @@ function Gate({ progress, smash }: { progress: Prog; smash: Smash }) {
     signMat.uniforms.uBoost.value = surge * 2.5 + o * 0.4;
 
     if (light.current) light.current.intensity = 4 + o * 60 + surge * 25;
+    // portal: an ember glow through the crack → warm gold as the doors part → HDR white-gold (bloom) on the walk-in
+    const walk = smoothstep(0.55, 1, progress.current);
+    const heat = Math.min(1, 0.15 + o * 0.45 + surge * 0.3 + walk * 0.4);
     if (portal.current) {
-      // dim through the crack, the full gym once the doors are open (kept under the bloom threshold mostly)
       const m = portal.current.material as THREE.MeshBasicMaterial;
-      m.color.setScalar(Math.min(0.9, 0.25 + o * 0.6 + surge * 0.3));
+      m.color.copy(PORTAL_DIM).lerp(PORTAL_HOT, heat).multiplyScalar(0.6 + walk * 1.8 + 0.08 * Math.sin(time * 2.1));
     }
+    if (core.current) core.current.opacity = Math.min(1, 0.25 + o * 0.5 + walk * 0.6);
+    // the doorway halo gives way once the doors are open: nothing should wash over the gym
+    if (halo.current) halo.current.opacity = 0.12 * (1 - Math.min(1, Math.max(0, o)));
     // the whole gate rattles in its frame on impact
     if (root.current) {
       const sh = shakeOffset(sc.trauma, time * 1.7, { pos: 0.05, roll: 0.006 });
@@ -433,13 +433,16 @@ function Gate({ progress, smash }: { progress: Prog; smash: Smash }) {
       <primitive object={spotTarget} position={[0, 2.4, 0]} />
       <spotLight position={[0, 7.4, 5.5]} target={spotTarget} angle={0.42} penumbra={0.85} intensity={130} decay={1.4} distance={24} color="#ffe2b8" />
 
-      {/* the real gym behind the gate (9 × 7 matches the crop's aspect); the camera ends 1.5 in front of it */}
-      <mesh ref={portal} position={[0, 3.5, -4]}>
-        <planeGeometry args={[9, 7]} />
-        <meshBasicMaterial map={gym} color="#404040" toneMapped={false} fog={false} />
+      {/* the light behind the gate (see PORTAL) */}
+      <mesh ref={portal} position={[0, PORTAL.y, PORTAL.z]}>
+        <planeGeometry args={[PORTAL.w, PORTAL.h]} />
+        <meshBasicMaterial color={PORTAL_DIM} toneMapped={false} fog={false} />
       </mesh>
+      <sprite position={[0, 2.4, PORTAL.z + 0.1]} scale={[9, 7, 1]}>
+        <spriteMaterial ref={core} map={glow} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} fog={false} opacity={0.25} />
+      </sprite>
       <sprite position={[0, 2.6, -1.5]} scale={[14, 10, 1]}>
-        <spriteMaterial map={glow} blending={THREE.AdditiveBlending} depthWrite={false} opacity={0.12} />
+        <spriteMaterial ref={halo} map={glow} blending={THREE.AdditiveBlending} depthWrite={false} opacity={0.12} />
       </sprite>
       <pointLight ref={light} position={[0, 3, -1.2]} color="#f5c870" distance={30} decay={1.3} intensity={4} />
     </group>

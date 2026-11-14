@@ -20,8 +20,8 @@ export function usePreloadAthleteWhenIdle(load: () => Promise<AthleteModule>) {
       if (!cancelled) load().then((m) => m.preloadAthlete()).catch(() => {});
     };
     const schedule = () => {
-      if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(go, { timeout: 3000 });
-      else timer = window.setTimeout(go, 1200);
+      if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(go, { timeout: 1000 });
+      else timer = window.setTimeout(go, 300);
     };
     if (document.readyState === "complete") schedule();
     else window.addEventListener("load", schedule, { once: true });

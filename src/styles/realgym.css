@@ -1,6 +1,6 @@
 /* ════════ Real gym: step inside ════════ */
 
-/* Overlap the gate's last (fully golden) screen: no blank gold scroll between the two scenes.
+/* Overlap the gate's last screen (the gym seen through the doors): no scroll gap between the two scenes.
    The section is invisible until its pin starts, i.e. the exact moment the gate's pin ends. */
 .realgym-wrap {
   position: relative;
@@ -14,7 +14,7 @@
 .realgym {
   --ui: 0;
   --prompt: 0;
-  --stage-filter: blur(6px);
+  --stage-filter: none;
   --fade: 0;
   --reveal: 0;
   --rg-black: #050505;
@@ -341,3 +341,16 @@
     filter: none;
   }
 }
+
+/* Exit curtain: the ribbon and the tour rise over the last 40svh of the pinned 360° (its outro),
+   so the gym dims and blurs underneath them instead of cutting to a black frame. */
+.realgym-wrap + .marquee {
+  z-index: 3;
+  margin-top: -40svh;
+}
+.realgym-wrap + .marquee + .tour {
+  z-index: 3;
+  /* feathered top edge: the gym dissolves into the page instead of meeting a hard line */
+  background: linear-gradient(180deg, transparent, var(--ink) min(22vh, 200px));
+}
+

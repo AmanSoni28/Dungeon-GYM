@@ -10,6 +10,7 @@ export function Cursor() {
   const ring = useRef<HTMLDivElement>(null);
   const [label, setLabel] = useState("");
   const [state, setState] = useState<"idle" | "hover" | "label">("idle");
+  const [ghost, setGhost] = useState(false);
 
   useEffect(() => {
     if (isTouch()) return;
@@ -35,6 +36,7 @@ export function Cursor() {
         return;
       }
       const text = t.getAttribute("data-cursor") || "";
+      setGhost(t.hasAttribute("data-cursor-ghost"));
       setLabel(text);
       setState(text ? "label" : "hover");
     };
@@ -62,7 +64,7 @@ export function Cursor() {
 
   return (
     <>
-      <div ref={ring} className={`cursor-ring is-${state}`} aria-hidden>
+      <div ref={ring} className={`cursor-ring is-${state}${ghost ? " is-ghost" : ""}`} aria-hidden>
         <span className="cursor-ring__label">{label}</span>
       </div>
       <div ref={dot} className="cursor-dot" aria-hidden />

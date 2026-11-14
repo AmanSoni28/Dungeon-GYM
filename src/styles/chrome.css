@@ -54,6 +54,14 @@
   &.is-down {
     scale: 0.8;
   }
+  /* see-through ring so the muscle under it stays visible */
+  &.is-label.is-ghost {
+    background: transparent;
+    .cursor-ring__label {
+      color: var(--accent);
+      text-shadow: 0 1px 6px rgb(0 0 0 / 0.8);
+    }
+  }
 }
 
 .cursor-ring__label {
@@ -82,22 +90,47 @@
   z-index: 9999;
   display: grid;
   place-items: center;
+  overflow: hidden;
 }
 
 .pl__half {
+  --rim: 0;
   position: absolute;
   left: 0;
   right: 0;
   height: 50.5%;
   background: radial-gradient(ellipse at 50% 100%, oklch(0.2 0.03 50), var(--ink) 70%);
 
+  /* molten rim on the split edge — fades as the doors open */
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    opacity: var(--rim);
+    background: linear-gradient(90deg, transparent, var(--gold-bright) 30%, oklch(1 0.03 90), var(--gold-bright) 70%, transparent);
+    box-shadow: 0 0 calc(30px * var(--rim)) calc(6px * var(--rim)) color-mix(in oklch, var(--gold) 70%, transparent);
+  }
+
   &.pl__half--top {
     top: 0;
+    &::after { bottom: 0; }
   }
   &.pl__half--bottom {
     bottom: 0;
     background: radial-gradient(ellipse at 50% 0%, oklch(0.2 0.03 50), var(--ink) 70%);
+    &::after { top: 0; }
   }
+}
+
+.pl__flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse 70% 30% at 50% 50%, oklch(0.97 0.05 90), color-mix(in oklch, var(--gold) 40%, transparent) 40%, transparent 75%);
+  mix-blend-mode: screen;
 }
 
 .pl__crack {
@@ -117,6 +150,24 @@
   inset: 0;
   display: grid;
   place-items: center;
+}
+
+/* breathing forge glow behind the logo */
+.pl__glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(90vw, 1100px);
+  aspect-ratio: 2.2;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in oklch, var(--ember) 32%, transparent), color-mix(in oklch, var(--gold) 10%, transparent) 55%, transparent);
+  filter: blur(20px);
+  animation: pl-breathe 3.2s ease-in-out infinite alternate;
+}
+@keyframes pl-breathe {
+  from { scale: 0.92; }
+  to { scale: 1.08; }
 }
 
 .pl__embers span {
@@ -139,9 +190,15 @@
 }
 
 .pl__logo {
+  position: relative;
   display: grid;
   justify-items: center;
-  gap: 8px;
+  gap: 14px;
+}
+
+.pl__wordwrap {
+  display: grid;
+  > * { grid-area: 1 / 1; }
 }
 
 .pl__word {
@@ -149,6 +206,7 @@
   font-size: clamp(64px, 16vw, 230px);
   line-height: 1;
   letter-spacing: 0.04em;
+  text-align: center;
   /* molten gold rising with the counter */
   background: linear-gradient(to top, var(--gold-deep) 0%, var(--gold-bright) calc(var(--p) - 4%), oklch(1 0.05 90) var(--p), oklch(0.25 0.01 60) calc(var(--p) + 0.5%));
   -webkit-background-clip: text;
@@ -157,12 +215,44 @@
   filter: drop-shadow(0 0 30px color-mix(in oklch, var(--gold) 25%, transparent));
 }
 
+/* light glint sweeping across the letters */
+.pl__word--shine {
+  background: linear-gradient(105deg, transparent 42%, oklch(1 0.03 90 / 0.85) 50%, transparent 58%) 0 0 / 250% 100% no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  mix-blend-mode: screen;
+  filter: none;
+  animation: pl-glint 2.6s var(--ease-in-out) 0.9s infinite;
+}
+@keyframes pl-glint {
+  from { background-position: 120% 0; }
+  70%, to { background-position: -20% 0; }
+}
+
+.pl__subrow {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 2vw, 24px);
+}
+
+.pl__rule {
+  width: clamp(32px, 8vw, 110px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold));
+  transform-origin: right;
+  &:last-child {
+    transform-origin: left;
+    background: linear-gradient(90deg, var(--gold), transparent);
+  }
+}
+
 .pl__sub {
   font-family: var(--font-serif);
   font-style: italic;
   font-size: clamp(18px, 2.4vw, 30px);
   color: var(--muted);
   letter-spacing: 0.3em;
+  white-space: nowrap;
 }
 
 .pl__foot {
@@ -180,6 +270,10 @@
   letter-spacing: 0.3em;
   text-transform: uppercase;
   color: var(--muted);
+  animation: pl-status 0.6s var(--ease-out) both;
+}
+@keyframes pl-status {
+  from { opacity: 0; translate: 0 8px; filter: blur(4px); }
 }
 
 .pl__count {
@@ -188,16 +282,23 @@
   line-height: 0.8;
   color: var(--gold);
   font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 40px color-mix(in oklch, var(--gold) 35%, transparent);
+}
+
+.pl__track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: oklch(1 0 0 / 0.06);
 }
 
 .pl__bar {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  height: 2px;
-  width: 100%;
+  height: 100%;
   transform-origin: left;
-  background: linear-gradient(90deg, var(--ember), var(--gold-bright));
+  background: linear-gradient(90deg, var(--ember-deep), var(--ember) 60%, var(--gold-bright));
+  box-shadow: 0 0 14px 1px color-mix(in oklch, var(--ember) 70%, transparent);
 }
 
 /* ════════ Navbar ════════ */

@@ -13,12 +13,11 @@ import { Suspense, use, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { haulPose, type HandMarks, type RopeRig } from "@/lib/classes/ropePull";
-import { ATHLETE_MODEL, athleteGloss, canonicalBone, loadAthleteScene, preloadAthlete } from "@/lib/athlete/model";
+import { ATHLETE_MODEL, athleteGloss, canonicalBone, loadAthleteScene, preloadAthlete as preloadFiles } from "@/lib/athlete/model";
 
 export { canonicalBone };
 
 export const PULLER_MODEL = ATHLETE_MODEL;
-export { preloadAthlete };
 
 /** this scene's private copy of the athlete (it bulks up his geometry); FBX bytes and textures are shared */
 let ropeScene: Promise<THREE.Group> | null = null;
@@ -26,6 +25,12 @@ const getRopeScene = () => {
   ropeScene ??= loadAthleteScene();
   ropeScene.catch(() => (ropeScene = null));
   return ropeScene;
+};
+
+/** idle preload: download the files and parse his copy now, so mounting doesn't block on the FBX parse */
+export const preloadAthlete = () => {
+  preloadFiles();
+  getRopeScene().catch(() => {});
 };
 
 /** extra muscle (m, pushed out along the skin normal) by the bone a vertex follows: a gym-built frame */

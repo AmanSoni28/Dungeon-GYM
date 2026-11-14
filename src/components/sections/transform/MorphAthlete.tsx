@@ -11,9 +11,8 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { athleteGloss, canonicalBone, loadAthleteScene } from "@/lib/athlete/model";
+import { athleteGloss, canonicalBone, loadAthleteScene, preloadAthlete as preloadFiles } from "@/lib/athlete/model";
 
-export { preloadAthlete } from "@/lib/athlete/model";
 
 /** What the parent asks for; the figure eases toward it. */
 export type BodyInput = { fat: number; muscle: number; posture: number; yaw: number; sway: boolean };
@@ -73,6 +72,12 @@ const loadAthlete = () => {
   loading ??= loadAthleteScene();
   loading.catch(() => (loading = null));
   return loading;
+};
+
+/** idle preload: download the files and parse this copy now, so mounting doesn't block on the FBX parse */
+export const preloadAthlete = () => {
+  preloadFiles();
+  loadAthlete().catch(() => {});
 };
 
 /** Build the fat and muscle morph targets from the skin weights. */

@@ -63,7 +63,11 @@ export function RealGym({ views = gymViews, forceMode }: { views?: GymView[]; fo
     apply(0);
     // The section overlaps the gate's final screen (see .realgym-wrap) and stays hidden until the
     // gate finishes, so the gym photo behind the gate hands over instantly: one continuous shot.
-    const show = (v: boolean) => el.classList.toggle("is-entered", v);
+    // Decided from geometry on every scroll (pinned ⇒ top is 0): enter/leave callbacks can be skipped by a
+    // refresh or a fast scroll, which left the section sliding up over the open gate.
+    const sync = () => el.classList.toggle("is-entered", el.getBoundingClientRect().top <= 1);
+    sync();
+    window.addEventListener("scroll", sync, { passive: true });
     const ctx = gsap.context(() => {
       ScrollTrigger.create({
         trigger: el,
@@ -72,12 +76,13 @@ export function RealGym({ views = gymViews, forceMode }: { views?: GymView[]; fo
         pin: true,
         scrub: true,
         onUpdate: (s) => apply(s.progress),
-        onEnter: () => show(true),
-        onLeaveBack: () => show(false),
-        onRefresh: (s) => show(s.progress > 0 || s.isActive),
+        onRefresh: sync,
       });
     }, el);
-    return () => ctx.revert();
+    return () => {
+      window.removeEventListener("scroll", sync);
+      ctx.revert();
+    };
   }, []);
 
   // explore meter: updated straight on the DOM every frame (no React re-render)

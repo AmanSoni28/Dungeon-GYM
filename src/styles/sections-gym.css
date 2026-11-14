@@ -754,7 +754,6 @@
   width: 90px;
   height: 90px;
   background: radial-gradient(circle, rgb(255 225 150 / 0.55), rgb(212 175 55 / 0.15) 45%, transparent 70%);
-  mix-blend-mode: screen;
   animation: mstage-pulse 2.6s ease-out infinite;
 }
 @keyframes mstage-pulse {

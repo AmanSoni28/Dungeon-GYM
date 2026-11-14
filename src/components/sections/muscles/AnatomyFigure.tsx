@@ -88,7 +88,17 @@ function AnatomyFigureImpl({ view, active, hover }: Props) {
         <filter id={id("glow")} x="-60%" y="-60%" width="220%" height="220%">
           <feGaussianBlur stdDeviation="9" />
         </filter>
+        {/* Headless: the neck dissolves into darkness above the traps (jaw ends ~y152). */}
+        <linearGradient id={id("neckFade")} gradientUnits="userSpaceOnUse" x1="0" y1="138" x2="0" y2="176">
+          <stop offset="0" stopColor="#fff" stopOpacity="0" />
+          <stop offset="1" stopColor="#fff" stopOpacity="1" />
+        </linearGradient>
+        <mask id={id("headless")} maskUnits="userSpaceOnUse" x="0" y="0" width={VIEWBOX.w} height={VIEWBOX.h}>
+          <rect width={VIEWBOX.w} height={VIEWBOX.h} fill={url("neckFade")} />
+        </mask>
       </defs>
+
+      <g mask={url("headless")}>
 
       {/* golden rim light around the body */}
       <g className="af__rim" filter={url("blur")}>
@@ -135,6 +145,7 @@ function AnatomyFigureImpl({ view, active, hover }: Props) {
       <g clipPath={url("clip")} pointerEvents="none">
         <rect width={VIEWBOX.w} height={VIEWBOX.h} fill={url("key")} />
         <rect width={VIEWBOX.w} height={VIEWBOX.h} fill={url("falloff")} />
+      </g>
       </g>
     </svg>
   );

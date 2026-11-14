@@ -144,6 +144,7 @@ export function MuscleStage({ active, hover, onHover, onSelect }: Props) {
       ref={ref}
       className={`mstage${seen ? " is-in" : ""}`}
       data-cursor="Rotate"
+      data-cursor-ghost=""
       tabIndex={0}
       aria-label="Athlete muscle map. Use left and right arrow keys to turn the athlete."
       onPointerDown={onPointerDown}
