@@ -9,39 +9,18 @@
   padding-block: clamp(72px, 9vw, 160px);
 }
 
-/* Full-bleed gold hairline that opens every section */
-.section::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  z-index: 1;
-  pointer-events: none;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in oklch, var(--accent) 18%, transparent) 15%,
-    color-mix(in oklch, var(--accent) 65%, transparent) 50%,
-    color-mix(in oklch, var(--accent) 18%, transparent) 85%,
-    transparent
-  );
-  transition: background 0.8s;
-}
-
-/* Soft glow that sits under the hairline's centre */
+/* Sections flow into one another with no rule between them. Each opens under a faint, wide pool of
+   accent light instead; it fades to nothing at every edge, so no seam is ever visible. */
 .section > .container:first-child::before {
   content: "";
   position: absolute;
   top: 0;
   left: 50%;
-  width: min(60vw, 900px);
-  height: 120px;
-  translate: -50% -50%;
+  width: min(80vw, 1200px);
+  height: clamp(220px, 26vw, 380px);
+  translate: -50% 0;
   pointer-events: none;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, color-mix(in oklch, var(--accent) 14%, transparent), transparent);
+  background: radial-gradient(closest-side, color-mix(in oklch, var(--accent) 7%, transparent), transparent);
   transition: background 0.8s;
 }
 
@@ -97,17 +76,6 @@
   background: linear-gradient(90deg, transparent, currentColor);
 }
 
-/* Footer spans edge-to-edge with the same hairline language */
 .footer {
   position: relative;
-}
-.footer::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--accent) 55%, transparent), transparent);
 }
