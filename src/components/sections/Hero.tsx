@@ -71,8 +71,10 @@ export function Hero() {
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ defaults: { ease: "expo.out" } });
       tl.from(".hero__rule", { scaleX: 0, duration: 1.6, ease: "power3.inOut" })
-        .from(".hero__char", { opacity: 0, y: 24, filter: "blur(14px)", duration: 1.8, stagger: { each: 0.07, from: "center" } }, 0.2)
-        .from(".hero__word", { letterSpacing: "0.6em", duration: 2.4 }, 0.2)
+        // transform + opacity only: a blur filter and a letter-spacing tween on 168px type re-painted and
+        // re-laid-out every frame, right as the 3D gate starts rendering — the landing's main stutter
+        .from(".hero__char", { opacity: 0, yPercent: 28, scale: 1.18, duration: 1.8, stagger: { each: 0.07, from: "center" } }, 0.2)
+        .from(".hero__word", { scaleX: 1.3, duration: 2.4, clearProps: "transform" }, 0.2)
         .from(".hero__kicker", { opacity: 0, y: 10, duration: 1.2 }, 1)
         .from(".hero__cta", { opacity: 0, y: 16, duration: 1.2 }, 1.2)
         .from(".hero__frame, .hero__scroll, .hero__hint", { opacity: 0, duration: 1.6 }, 1.3);

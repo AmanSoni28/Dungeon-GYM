@@ -42,14 +42,20 @@ export function Marquee({ items, reverse = false }: { items: string[]; reverse?:
     ro.observe(el);
     document.fonts?.ready.then(measure).catch(() => {});
 
+    // only touch the DOM when a value actually changes: each custom-property write restyles that subtree,
+    // and most words sit at --f: 0 most of the time
+    const shownF: string[] = [];
     const paint = (x: number) => {
       tr.style.transform = `translate3d(${x.toFixed(2)}px,0,0)`;
       for (let i = 0; i < words.length; i++) {
         const d = Math.abs(centres[i] + x - half) / (half * 2 * SPOT);
-        const f = d >= 1 ? 0 : 1 - d * d * (3 - 2 * d);
-        words[i].style.setProperty("--f", f.toFixed(3));
+        const f = (d >= 1 ? 0 : 1 - d * d * (3 - 2 * d)).toFixed(2);
+        if (shownF[i] === f) continue;
+        shownF[i] = f;
+        words[i].style.setProperty("--f", f);
       }
     };
+    let shownLean = "";
 
     if (reduce) {
       // still and calm: centre the first row, light what sits in the middle
@@ -91,7 +97,11 @@ export function Marquee({ items, reverse = false }: { items: string[]; reverse?:
       // lean into the motion (inertia), settling upright at drift speed
       const wantLean = Math.max(-9, Math.min(9, -flow * (speed - DRIFT) * 0.006));
       lean += (wantLean - lean) * (1 - Math.exp(-dt * 6));
-      tr.style.setProperty("--lean", `${lean.toFixed(2)}deg`);
+      const ln = `${lean.toFixed(1)}deg`;
+      if (ln !== shownLean) {
+        shownLean = ln;
+        tr.style.setProperty("--lean", ln);
+      }
       paint(x);
     };
 

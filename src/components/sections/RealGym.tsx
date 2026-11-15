@@ -35,6 +35,7 @@ export function RealGym({ views = gymViews, forceMode }: { views?: GymView[]; fo
   const [viewIndex, setViewIndex] = useState(0);
   const [interacted, setInteracted] = useState(false);
   const [ready, setReady] = useState(false);
+  const [awake, setAwake] = useState(false);
   const { ref: stageRef, inView, seen } = useInView<HTMLDivElement>("150% 0px");
   const view = views[viewIndex];
   const has360 = view.kind === "equirect";
@@ -65,9 +66,25 @@ export function RealGym({ views = gymViews, forceMode }: { views?: GymView[]; fo
     // gate finishes, so the gym photo behind the gate hands over instantly: one continuous shot.
     // Decided from geometry on every scroll (pinned ⇒ top is 0): enter/leave callbacks can be skipped by a
     // refresh or a fast scroll, which left the section sliding up over the open gate.
-    const sync = () => el.classList.toggle("is-entered", el.getBoundingClientRect().top <= 1);
+    const sync = () => {
+      const top = el.getBoundingClientRect().top;
+      el.classList.toggle("is-entered", top <= 1);
+      // run the viewer only from the last screen of the gate onwards (it sits hidden behind the gate before that;
+      // rendering it there meant two full-screen 3D scenes every frame during the whole opening)
+      setAwake(top <= window.innerHeight);
+    };
+    // at most one geometry read per frame (smooth scrolling fires scroll events every frame, often right after
+    // style writes, which turned each read into a forced synchronous layout)
+    let queued = 0;
+    const onScroll = () => {
+      if (queued) return;
+      queued = requestAnimationFrame(() => {
+        queued = 0;
+        sync();
+      });
+    };
     sync();
-    window.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
     const ctx = gsap.context(() => {
       ScrollTrigger.create({
         trigger: el,
@@ -80,7 +97,8 @@ export function RealGym({ views = gymViews, forceMode }: { views?: GymView[]; fo
       });
     }, el);
     return () => {
-      window.removeEventListener("scroll", sync);
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(queued);
       ctx.revert();
     };
   }, []);
@@ -151,7 +169,7 @@ export function RealGym({ views = gymViews, forceMode }: { views?: GymView[]; fo
               key={view.id}
               view={view}
               look={look}
-              running={inView}
+              running={inView && awake}
               lite={mode === "lite"}
               autoRotate={autoRotate}
               onLook={onLook}

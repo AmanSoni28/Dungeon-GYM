@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { Environment, Lightformer, MeshReflectorMaterial } from "@react-three/drei";
 import { makeGlowTexture, makeStoneTexture, makeTextTexture } from "./textures";
@@ -554,6 +554,44 @@ export type GateSceneProps = {
   onReady?: () => void;
 };
 
+/**
+ * The gate stays paused (frameloop "never") behind the preloader, so without this its shaders — reflective floor,
+ * post-processing, environment, embers — would all compile on the first visible frame, freezing the landing reveal.
+ * Instead: once the browser is idle, compile everything (in parallel where the GPU allows) and draw two frames
+ * off-screen, then report ready. Rendering stays paused afterwards until the page is revealed.
+ */
+function Warmup({ onReady }: { onReady?: () => void }) {
+  const { gl, scene, camera, advance } = useThree();
+  const done = useRef(onReady);
+  done.current = onReady;
+  useEffect(() => {
+    let live = true;
+    const idle = (fn: () => void) =>
+      typeof window.requestIdleCallback === "function" ? window.requestIdleCallback(fn, { timeout: 600 }) : window.setTimeout(fn, 60);
+    const id = idle(async () => {
+      try {
+        await gl.compileAsync(scene, camera);
+      } catch {
+        /* compileAsync unsupported: the frames below still compile synchronously, just off-screen */
+      }
+      if (!live) return;
+      // two frames: the first builds render targets (reflections, post FX), the second uses them
+      advance(performance.now(), true);
+      requestAnimationFrame(() => {
+        if (!live) return;
+        advance(performance.now(), true);
+        done.current?.();
+      });
+    });
+    return () => {
+      live = false;
+      if (typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(id as number);
+      else window.clearTimeout(id as number);
+    };
+  }, [gl, scene, camera, advance]);
+  return null;
+}
+
 export default function GateScene({ progress, active = true, smash, lite = false, onReady }: GateSceneProps) {
   const fallback = useRef<SmashClock>(createSmashClock());
   const clock = smash ?? fallback;
@@ -563,8 +601,8 @@ export default function GateScene({ progress, active = true, smash, lite = false
       frameloop={active ? "always" : "never"}
       camera={{ position: [0, 1.7, 14], fov: 58, near: 0.1, far: 70 }}
       gl={{ antialias: !lite, powerPreference: "high-performance" }}
-      onCreated={() => onReady?.()}
     >
+      <Warmup onReady={onReady} />
       <color attach="background" args={["#050505"]} />
       <fog attach="fog" args={["#050505", 8, 44]} />
       <ambientLight intensity={0.12} color="#ffd9b0" />

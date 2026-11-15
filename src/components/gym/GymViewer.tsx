@@ -95,10 +95,25 @@ function Rig({ view, look, autoRotate, onLook, brightness }: RigProps) {
   return null;
 }
 
+/**
+ * Mounted once the photo has loaded. The viewer stays paused until the visitor nears it, so draw one frame now,
+ * at idle: the big 360° texture is uploaded to the GPU and the shaders compiled off-screen, instead of on the
+ * first visible frame of the hand-over from the gate (where it showed as a hitch). The canvas keeps that frame.
+ */
 function Ready({ onReady }: { onReady?: () => void }) {
+  const advance = useThree((s) => s.advance);
   useEffect(() => {
     onReady?.();
   }, [onReady]);
+  useEffect(() => {
+    const draw = () => advance(performance.now(), true);
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(draw, { timeout: 1500 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(draw, 200);
+    return () => window.clearTimeout(id);
+  }, [advance]);
   return null;
 }
 

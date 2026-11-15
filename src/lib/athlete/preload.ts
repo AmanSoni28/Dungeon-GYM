@@ -33,14 +33,35 @@ export function usePreloadAthleteWhenIdle(load: () => Promise<AthleteModule>) {
         .catch(() => {});
     };
     const schedule = () => {
-      if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(go, { timeout: 1000 });
+      if (cancelled) return;
+      if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(go, { timeout: 2500 });
       else timer = window.setTimeout(go, 300);
     };
-    if (document.readyState === "complete") schedule();
-    else window.addEventListener("load", schedule, { once: true });
+    // Don't compete with the opening: the FBX parse and the WebGL context are long main-thread tasks, and landing
+    // them under the preloader or the landing reveal made both stutter. Wait until the homepage is revealed
+    // (html.is-loaded) and its entrance has played; the long pinned gate + 360° gym come first, so there is still
+    // plenty of time before these sections are reached (and a section reached early mounts on its own anyway).
+    const ENTRANCE_MS = 2800;
+    let mo: MutationObserver | null = null;
+    const afterReveal = () => {
+      timer = window.setTimeout(schedule, ENTRANCE_MS);
+    };
+    const waitForReveal = () => {
+      if (document.documentElement.classList.contains("is-loaded")) return afterReveal();
+      mo = new MutationObserver(() => {
+        if (!document.documentElement.classList.contains("is-loaded")) return;
+        mo?.disconnect();
+        mo = null;
+        afterReveal();
+      });
+      mo.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    };
+    if (document.readyState === "complete") waitForReveal();
+    else window.addEventListener("load", waitForReveal, { once: true });
     return () => {
       cancelled = true;
-      window.removeEventListener("load", schedule);
+      mo?.disconnect();
+      window.removeEventListener("load", waitForReveal);
       if (idle) window.cancelIdleCallback?.(idle);
       window.clearTimeout(timer);
     };
