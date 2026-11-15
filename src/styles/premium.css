@@ -78,4 +78,89 @@
 
 .footer {
   position: relative;
+  border-top: 0; /* no rule above the footer either: it rises out of the page */
+}
+
+/* ════════════════════════════════════════════════════════════
+   ONE CONTINUOUS PAGE
+   Sections that carry their own background colour are feathered
+   into their neighbours, so the site scrolls as a single surface
+   with no hard joins or rules between blocks.
+   ════════════════════════════════════════════════════════════ */
+
+/* (the walk-through gym already dissolves under the ribbon and Tour — see realgym.css) */
+
+/* Transformations darkens into the fire of the Fire → Water scene that follows */
+.tfx {
+  background:
+    radial-gradient(ellipse 60% 50% at 28% 58%, rgb(214 120 50 / calc(0.06 + var(--t) * 0.22)), transparent 70%),
+    linear-gradient(to bottom, transparent 72%, oklch(0.1 0.01 40)),
+    var(--ink);
+}
+
+/* the spa's deep water settles back into the page before the plans */
+.spa::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: clamp(72px, 9vw, 160px); /* = the section's bottom padding, so it never dims content */
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, color-mix(in oklch, var(--teal-deep) 45%, var(--ink)) 55%, var(--ink));
+}
+
+/* ════════════════════════════════════════════════════════════
+   SITE-WIDE FINISH
+   ════════════════════════════════════════════════════════════ */
+
+html {
+  /* slim gold scrollbar instead of the system grey one */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--accent) 55%, var(--ink)) var(--ink);
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--ink);
+}
+::-webkit-scrollbar-thumb {
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: linear-gradient(var(--gold-bright), var(--gold-deep));
+}
+
+body {
+  text-rendering: optimizeLegibility;
+  font-kerning: normal;
+  font-feature-settings: "kern", "liga", "calt";
+}
+
+/* the film grain is a full-screen layer: keep it on the compositor, and still for reduced motion */
+body::after {
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  body::after {
+    animation: none;
+  }
+}
+
+/* consistent typographic rhythm in every section head */
+.section-head .lead {
+  line-height: 1.7;
+}
+
+/* one focus style across the site, following the accent (gold, or teal in the spa) */
+:focus-visible {
+  outline: 1.5px solid var(--accent);
+  outline-offset: 4px;
+}
+
+/* selected text follows the accent too */
+::selection {
+  background: color-mix(in oklch, var(--accent) 85%, white);
+  color: var(--ink);
 }
