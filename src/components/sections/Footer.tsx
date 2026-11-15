@@ -3,8 +3,13 @@
 import { brand, nav } from "@/data/site";
 import { scrollToTarget } from "@/lib/utils";
 import { Logo } from "@/components/chrome/Navbar";
+import { useInView } from "@/lib/useInView";
+
+const WORD = "DUNGEON".split("");
 
 export function Footer() {
+  // time-based reveal (not scroll-linked): the footer ends the page, so a scroll-driven animation could never finish
+  const { ref: wordRef, seen: wordIn } = useInView<HTMLDivElement>("0px 0px -8% 0px");
   return (
     <footer id="contact" className="footer">
       <div className="container footer__grid">
@@ -145,9 +150,10 @@ export function Footer() {
         </a>
       </div>
 
-      <div className="footer__word" aria-hidden>
-        {"DUNGEON".split("").map((c, i) => (
-          <span key={i} style={{ "--i": i } as React.CSSProperties}>
+      {/* the closing wordmark: letters rise out of the dark once it is on screen, then a light sweep runs across the gold */}
+      <div ref={wordRef} className={`footer__word${wordIn ? " is-in" : ""}`} aria-hidden>
+        {WORD.map((c, i) => (
+          <span key={i} data-c={c} style={{ "--i": i, "--n": WORD.length } as React.CSSProperties}>
             {c}
           </span>
         ))}

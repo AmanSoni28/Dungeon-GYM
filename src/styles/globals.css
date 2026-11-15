@@ -45,8 +45,8 @@
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.83, 0, 0.17, 1);
-  --gutter: clamp(16px, 4vw, 64px);
-  --maxw: 1320px;
+  --gutter: clamp(16px, 4vw, 96px);
+  --maxw: 100vw; /* full-bleed: sections span the whole screen */
   --radius: 18px;
 
   color-scheme: dark;
@@ -154,7 +154,7 @@ body::after {
 
 /* ── Layout helpers ─────────────────────────────── */
 .container {
-  width: min(100% - 2 * var(--gutter), var(--maxw));
+  width: calc(100% - 2 * var(--gutter));
   margin-inline: auto;
 }
 

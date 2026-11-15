@@ -366,6 +366,8 @@
     position: absolute;
     inset: 0;
     transform-origin: 0 50%;
+    transform: scaleX(0);
+    will-change: transform;
     background: linear-gradient(90deg, #6b6158, var(--tf-gold-2) 40%, var(--tf-gold) 80%, #f6e3a1);
     box-shadow: 0 0 12px var(--tf-gold);
   }
@@ -557,8 +559,13 @@
   opacity: 0.16;
   stroke-dasharray: 3 5;
 }
-.tfx__chart-line {
-  filter: drop-shadow(0 0 4px rgb(212 175 55 / 0.45));
+/* a wide faint stroke under the line instead of a drop-shadow filter, which re-rasterises on every playhead move */
+.tfx__chart-glow {
+  fill: none;
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.14;
 }
 .tfx__chart-head {
   stroke: rgb(245 242 235 / 0.35);

@@ -1039,35 +1039,101 @@
   .fmap__cta { padding: 8px 10px; font-size: 10px; }
 }
 
-/* Giant wordmark rises letter by letter with a CSS scroll-driven timeline */
+/* Giant closing wordmark. Revealed on a timer once in view (.is-in): each letter tilts up out of the dark,
+   sharpening from a blur; a gold rule draws out from the centre; then a light sweep keeps travelling across
+   the metal. The whole word is always shown in full — nothing is cropped. */
 .footer__word {
+  --ease-word: cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
   display: flex;
   justify-content: center;
   margin-top: clamp(60px, 8vw, 110px);
+  padding-block: 0.04em 0.09em;
   font-family: var(--font-display);
-  font-size: 21vw;
-  line-height: 0.78;
-  overflow: clip;
+  font-size: min(21vw, 340px);
+  line-height: 0.92;
+  letter-spacing: 0.005em;
+  perspective: 900px;
+  overflow-x: clip;
   user-select: none;
 
+  /* warm ember glow breathing behind the letters */
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 10% 8% 0;
+    z-index: -1;
+    background: radial-gradient(ellipse 50% 60% at 50% 60%, rgb(212 175 55 / 0.16), transparent 70%);
+    opacity: 0;
+    transition: opacity 1.6s ease 0.4s;
+    pointer-events: none;
+  }
+  /* gold rule under the word, drawn out from the centre */
+  &::after {
+    content: "";
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-deep) 20%, var(--gold-bright) 50%, var(--gold-deep) 80%, transparent);
+    box-shadow: 0 0 14px rgb(212 175 55 / 0.55);
+    transform: scaleX(0);
+    transition: transform 1.4s var(--ease-word) 0.7s;
+  }
+
   span {
+    position: relative;
     display: inline-block;
-    background: linear-gradient(180deg, var(--gold-bright), var(--gold-deep) 70%, transparent);
+    /* polished metal: bright top, deep band, a reflected lift at the base */
+    background: linear-gradient(180deg, #fbeab0 0%, var(--gold-bright) 22%, #d4af37 48%, #8a6420 74%, #b8892f 90%, #e2c071 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    filter: drop-shadow(0 0.04em 0.06em rgb(0 0 0 / 0.55));
+    transform-origin: 50% 100%;
+    opacity: 0;
+    transform: translateY(38%) rotateX(-75deg);
+    transition:
+      transform 1.25s var(--ease-word),
+      opacity 0.9s ease,
+      translate 0.5s var(--ease-word);
+    transition-delay: calc(var(--i) * 85ms), calc(var(--i) * 85ms), 0s;
   }
-}
-@supports (animation-timeline: view()) {
-  .footer__word span {
-    animation: word-rise linear both;
-    animation-timeline: view();
-    animation-range: entry calc(var(--i) * 4%) cover 45%;
+  /* the moving highlight: the same letter on top, filled with a narrow bright band that slides across */
+  span::after {
+    content: attr(data-c);
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 38%, rgb(255 248 220 / 0.95) 50%, transparent 62%) 0 0 / 300% 100% no-repeat;
+    background-position: 150% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    pointer-events: none;
   }
+
+  &.is-in {
+    &::before { opacity: 1; animation: word-ember 6s ease-in-out 2s infinite; }
+    &::after { transform: scaleX(1); }
+    span { opacity: 1; transform: none; }
+    span::after { animation: word-sheen 5.5s ease-in-out infinite; animation-delay: calc(1.3s + var(--i) * 0.11s); }
+  }
+  /* letters lift under the cursor */
+  span:hover { translate: 0 -4%; }
 }
-@keyframes word-rise {
-  from { transform: translateY(100%); }
-  to { transform: none; }
+@keyframes word-sheen {
+  0% { background-position: 150% 0; }
+  32%, 100% { background-position: -50% 0; }
+}
+@keyframes word-ember {
+  50% { opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .footer__word span,
+  .footer__word::after { transition: none; opacity: 1; transform: none; }
+  .footer__word.is-in span::after,
+  .footer__word.is-in::before { animation: none; }
 }
 
 .footer__bottom {

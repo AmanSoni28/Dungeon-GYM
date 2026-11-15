@@ -47,7 +47,11 @@ type Rig = {
 
 const X = new THREE.Vector3(1, 0, 0);
 const Y = new THREE.Vector3(0, 1, 0);
-const T = { a: new THREE.Vector3(), b: new THREE.Vector3(), q: new THREE.Quaternion(), r: new THREE.Quaternion(), s: new THREE.Quaternion() };
+const T = {
+  a: new THREE.Vector3(), b: new THREE.Vector3(), d: new THREE.Vector3(), q: new THREE.Quaternion(), r: new THREE.Quaternion(), s: new THREE.Quaternion(),
+  // per-frame scratch (no allocations in the render loop)
+  fwd: new THREE.Vector3(), p1: new THREE.Vector3(), p2: new THREE.Vector3(), up: new THREE.Vector3(0, 0.06, 0),
+};
 
 const wpos = (o: THREE.Object3D, out: THREE.Vector3) => {
   o.updateWorldMatrix(true, false);
@@ -63,7 +67,7 @@ function rotateWorld(bone: THREE.Object3D, delta: THREE.Quaternion) {
 }
 function aim(bone: THREE.Object3D, child: THREE.Object3D, dir: THREE.Vector3) {
   const from = wpos(child, T.a).sub(wpos(bone, T.b)).normalize();
-  rotateWorld(bone, T.q.setFromUnitVectors(from, dir.clone().normalize()));
+  rotateWorld(bone, T.q.setFromUnitVectors(from, T.d.copy(dir).normalize()));
 }
 
 // One private copy of the model (the Group Classes athlete reshapes its own copy); FBX bytes and textures are shared.
@@ -220,12 +224,13 @@ function pose(rig: Rig, s: { fat: number; muscle: number; posture: number }, bre
 
   // arms: hang down, held further out by a bigger belly or bigger lats
   const out = 0.13 + 0.13 * s.fat + 0.07 * Math.max(0, s.muscle) + breath * 0.006;
-  for (const [sd, sign] of [["Left", 1], ["Right", -1]] as const) {
-    aim(b(`${sd}Arm`)!, b(`${sd}ForeArm`)!, new THREE.Vector3(sign * Math.sin(out), -Math.cos(out), 0.03 + 0.05 * slump));
-    aim(b(`${sd}ForeArm`)!, b(`${sd}Hand`)!, new THREE.Vector3(sign * Math.sin(out * 0.6), -Math.cos(out * 0.6), 0.2));
+  for (const [sd, sign] of SIDES) {
+    aim(b(`${sd}Arm`)!, b(`${sd}ForeArm`)!, T.p1.set(sign * Math.sin(out), -Math.cos(out), 0.03 + 0.05 * slump));
+    aim(b(`${sd}ForeArm`)!, b(`${sd}Hand`)!, T.p1.set(sign * Math.sin(out * 0.6), -Math.cos(out * 0.6), 0.2));
   }
-  rig.model.updateMatrixWorld(true);
+  // (the caller turns him and updates the world matrices once)
 }
+const SIDES = [["Left", 1], ["Right", -1]] as const;
 
 function Athlete({ input, marks }: { input: BodyInput; marks: BodyMarks }) {
   const [rig, setRig] = useState<Rig | null>(null);
@@ -284,12 +289,12 @@ function Athlete({ input, marks }: { input: BodyInput; marks: BodyMarks }) {
     rig.model.updateMatrixWorld(true);
 
     // callout anchors, pushed out to the skin
-    const fwd = T.a.set(Math.sin(c.yaw), 0, Math.cos(c.yaw));
-    const chest = wpos(rig.bone("Spine2")!, new THREE.Vector3()).addScaledVector(fwd, 0.13 + 0.03 * c.muscle).add(new THREE.Vector3(0, 0.06, 0));
+    const fwd = T.fwd.set(Math.sin(c.yaw), 0, Math.cos(c.yaw));
+    const chest = T.p1.setFromMatrixPosition(rig.bone("Spine2")!.matrixWorld).addScaledVector(fwd, 0.13 + 0.03 * c.muscle).add(T.up);
     project(chest, marks.chest);
-    const belly = wpos(rig.bone("Spine")!, new THREE.Vector3()).addScaledVector(fwd, 0.13 + 0.12 * c.fat);
+    const belly = T.p1.setFromMatrixPosition(rig.bone("Spine")!.matrixWorld).addScaledVector(fwd, 0.13 + 0.12 * c.fat);
     project(belly, marks.belly);
-    const arm = wpos(rig.bone("LeftArm")!, new THREE.Vector3()).lerp(wpos(rig.bone("LeftForeArm")!, new THREE.Vector3()), 0.5);
+    const arm = T.p1.setFromMatrixPosition(rig.bone("LeftArm")!.matrixWorld).lerp(T.p2.setFromMatrixPosition(rig.bone("LeftForeArm")!.matrixWorld), 0.5);
     project(arm, marks.arm);
     marks.ready = true;
   });

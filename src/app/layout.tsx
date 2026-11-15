@@ -8,6 +8,7 @@ import "@/styles/muscle-atlas.css";
 import "@/styles/transformations.css";
 import "@/styles/sections-spa.css";
 import "@/styles/sections-end.css";
+import "@/styles/premium.css";
 import { AppProvider } from "@/components/providers/AppProvider";
 
 const display = Anton({ subsets: ["latin"], weight: "400", variable: "--font-display", display: "swap" });

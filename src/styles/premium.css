@@ -1,0 +1,113 @@
+/* ════════════════════════════════════════════════════════════
+   PREMIUM LAYER · full-bleed sections
+   Loaded last. Purely presentational: no layout that JS measures
+   is changed here, so every interaction keeps working.
+   ════════════════════════════════════════════════════════════ */
+
+/* Wider screens get more breathing room between blocks */
+.section {
+  padding-block: clamp(72px, 9vw, 160px);
+}
+
+/* Full-bleed gold hairline that opens every section */
+.section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--accent) 18%, transparent) 15%,
+    color-mix(in oklch, var(--accent) 65%, transparent) 50%,
+    color-mix(in oklch, var(--accent) 18%, transparent) 85%,
+    transparent
+  );
+  transition: background 0.8s;
+}
+
+/* Soft glow that sits under the hairline's centre */
+.section > .container:first-child::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: min(60vw, 900px);
+  height: 120px;
+  translate: -50% -50%;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in oklch, var(--accent) 14%, transparent), transparent);
+  transition: background 0.8s;
+}
+
+/* Editorial split header on wide screens:
+   eyebrow + heading on the left, lead paragraph anchored bottom-right. */
+@media (min-width: 1100px) {
+  .section-head:not(.is-center):has(> .lead) {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    column-gap: clamp(40px, 6vw, 140px);
+    align-items: end;
+
+    > * {
+      grid-column: 1;
+    }
+    > .lead {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      align-self: end;
+      justify-self: end;
+      max-width: 46ch;
+      padding-left: 28px;
+      border-left: 1px solid color-mix(in oklch, var(--accent) 40%, transparent);
+    }
+  }
+
+  /* centred heads get a little more air at full width */
+  .section-head.is-center .lead {
+    max-width: 62ch;
+  }
+}
+
+/* Larger, roomier grids as the canvas widens */
+@media (min-width: 1600px) {
+  .plans__grid,
+  .ranks__row,
+  .tgrid {
+    gap: clamp(22px, 1.6vw, 36px);
+  }
+  .lead {
+    font-size: clamp(18px, 1.05vw, 22px);
+  }
+}
+
+/* Premium glass: inner highlight + depth */
+.glass {
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.06),
+    0 30px 60px -30px oklch(0 0 0 / 0.6);
+}
+
+/* Eyebrow rule fades in from the left */
+.eyebrow::before {
+  background: linear-gradient(90deg, transparent, currentColor);
+}
+
+/* Footer spans edge-to-edge with the same hairline language */
+.footer {
+  position: relative;
+}
+.footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--accent) 55%, transparent), transparent);
+}

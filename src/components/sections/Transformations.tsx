@@ -1,8 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { AnimatePresence, animate, motion, useMotionValue, useMotionValueEvent, useReducedMotion, type AnimationPlaybackControls } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, type AnimationPlaybackControls } from "framer-motion";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { transformations } from "@/data/site";
 import { metricAt, metricsAt, milestoneAt, monthAt, shapeFor, type Metrics } from "@/lib/transform/curves";
 import { useInView } from "@/lib/useInView";
@@ -38,54 +38,109 @@ function Delta({ from, to, unit }: { from: number; to: number; unit: string }) {
   );
 }
 
-/** Three curves over the months; solid up to now, ghosted after; a playhead with live dots. */
-function ProgressChart({ st, p }: { st: Story; p: number }) {
-  const W = 320;
-  const H = 130;
-  const N = 48;
-  const y = (k: Key, t: number) => {
-    const a = st.before[k];
-    const b = st.after[k];
-    const lo = Math.min(a, b);
-    const hi = Math.max(a, b);
-    const v = metricAt(a, b, t);
-    return 12 + (1 - (v - lo) / (hi - lo || 1)) * (H - 24);
-  };
-  const path = (k: Key) => Array.from({ length: N + 1 }, (_, i) => `${i ? "L" : "M"}${((i / N) * W).toFixed(1)},${y(k, i / N).toFixed(1)}`).join("");
-  const px = p * W;
+const CW = 320;
+const CH = 130;
+const CN = 48;
+/** y on the chart for metric k at time t */
+const chartY = (st: Story, k: Key, t: number) => {
+  const a = st.before[k];
+  const b = st.after[k];
+  const lo = Math.min(a, b);
+  const hi = Math.max(a, b);
+  const v = metricAt(a, b, t);
+  return 12 + (1 - (v - lo) / (hi - lo || 1)) * (CH - 24);
+};
+
+/** Moves the chart's playhead without a React render. */
+type ChartApi = { set: (p: number) => void };
+
+/**
+ * Three curves over the months; solid up to now, ghosted after; a playhead with live dots.
+ * The curves are built once per story; only the playhead moves, imperatively, every frame.
+ */
+const ProgressChart = memo(function ProgressChart({ st, month, api }: { st: Story; month: number; api: React.RefObject<ChartApi | null> }) {
+  const clip = useRef<SVGRectElement>(null);
+  const head = useRef<SVGLineElement>(null);
+  const dots = useRef<(SVGCircleElement | null)[]>([]);
+
+  const paths = useMemo(
+    () =>
+      METRICS.map((m) =>
+        Array.from({ length: CN + 1 }, (_, i) => `${i ? "L" : "M"}${((i / CN) * CW).toFixed(1)},${chartY(st, m.key, i / CN).toFixed(1)}`).join("")
+      ),
+    [st]
+  );
+
+  useLayoutEffect(() => {
+    api.current = {
+      set: (p) => {
+        const px = (p * CW).toFixed(2);
+        clip.current?.setAttribute("width", px);
+        head.current?.setAttribute("x1", px);
+        head.current?.setAttribute("x2", px);
+        METRICS.forEach((m, i) => {
+          const d = dots.current[i];
+          if (!d) return;
+          d.setAttribute("cx", px);
+          d.setAttribute("cy", chartY(st, m.key, p).toFixed(2));
+        });
+      },
+    };
+  }, [api, st]);
 
   return (
-    <svg className="tfx__chart" viewBox={`0 0 ${W} ${H + 18}`} role="img" aria-label={`Progress over ${st.months} months`}>
+    <svg className="tfx__chart" viewBox={`0 0 ${CW} ${CH + 18}`} role="img" aria-label={`Progress over ${st.months} months`}>
       <defs>
         <clipPath id="tfx-done">
-          <rect width={px} height={H} />
+          <rect ref={clip} width={0} height={CH} />
         </clipPath>
       </defs>
       {Array.from({ length: st.months + 1 }, (_, m) => (
-        <g key={m} className={m <= monthAt(p, st.months) ? "is-reached" : undefined}>
-          <line x1={(m / st.months) * W} x2={(m / st.months) * W} y1={0} y2={H} className="tfx__chart-grid" />
-          <text x={(m / st.months) * W} y={H + 14} textAnchor={m === 0 ? "start" : m === st.months ? "end" : "middle"}>
+        <g key={m} className={m <= month ? "is-reached" : undefined}>
+          <line x1={(m / st.months) * CW} x2={(m / st.months) * CW} y1={0} y2={CH} className="tfx__chart-grid" />
+          <text x={(m / st.months) * CW} y={CH + 14} textAnchor={m === 0 ? "start" : m === st.months ? "end" : "middle"}>
             {m === 0 ? "Day 1" : `M${m}`}
           </text>
         </g>
       ))}
-      {METRICS.map((m) => (
+      {METRICS.map((m, i) => (
         <g key={m.key}>
-          <path d={path(m.key)} stroke={m.color} className="tfx__chart-ghost" />
-          <path d={path(m.key)} stroke={m.color} className="tfx__chart-line" clipPath="url(#tfx-done)" />
+          <path d={paths[i]} stroke={m.color} className="tfx__chart-ghost" />
+          <g clipPath="url(#tfx-done)">
+            <path d={paths[i]} stroke={m.color} className="tfx__chart-glow" />
+            <path d={paths[i]} stroke={m.color} className="tfx__chart-line" />
+          </g>
         </g>
       ))}
-      <line x1={px} x2={px} y1={0} y2={H} className="tfx__chart-head" />
-      {METRICS.map((m) => (
-        <circle key={m.key} cx={px} cy={y(m.key, p)} r={4} fill={m.color} className="tfx__chart-dot" />
+      <line ref={head} x1={0} x2={0} y1={0} y2={CH} className="tfx__chart-head" />
+      {METRICS.map((m, i) => (
+        <circle key={m.key} ref={(el) => void (dots.current[i] = el)} cx={0} cy={chartY(st, m.key, 0)} r={4} fill={m.color} className="tfx__chart-dot" />
       ))}
     </svg>
   );
-}
+});
+
+/** The member's quote, word by word; only re-renders when the story changes. */
+const Quote = memo(function Quote({ text }: { text: string }) {
+  return (
+    <>
+      {`“${text}”`.split(" ").map((w, i) => (
+        <motion.span
+          key={i}
+          initial={{ opacity: 0, y: 12, filter: "blur(6px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          transition={{ duration: 0.5, delay: i * 0.03, ease: EASE }}
+        >
+          {w}{" "}
+        </motion.span>
+      ))}
+    </>
+  );
+});
 
 export function Transformations() {
   const [story, setStory] = useState(0);
-  const [p, setP] = useState(0);
+  const [p, setP] = useState(0); // the time-lapse position as React last rendered it (see `apply`)
   const st = transformations[story];
   const reduce = useReducedMotion();
   const { ref, inView, seen } = useInView<HTMLDivElement>("-15% 0px");
@@ -93,43 +148,106 @@ export function Transformations() {
   const { ref: nearRef, seen: near } = useInView<HTMLElement>("100% 0px");
   const warm = usePreloadAthleteWhenIdle(loadAthlete);
 
+  // ── playback. `pv` is the continuous time-lapse position (0 → 1) and moves every frame; React only hears about
+  // it (`p`) when something it renders visibly changes (a week, a rounded number), so the section isn't re-rendered
+  // 60 times a second. Everything continuous (body, rail, thumb, chart playhead, colour grade) is written straight
+  // to the DOM / the 3D input in `apply`.
   const pv = useMotionValue(0);
   const anim = useRef<AnimationPlaybackControls | null>(null);
   const [playing, setPlaying] = useState(false);
-  useMotionValueEvent(pv, "change", setP);
 
-  const play = (from = 0) => {
-    anim.current?.stop();
-    pv.set(from);
-    setPlaying(true);
+  const body = useRef<BodyInput>({ fat: 0, muscle: 0, posture: 0, yaw: 0, sway: true });
+  body.current.sway = !reduce;
+
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const railRef = useRef<HTMLElement>(null);
+  const thumbRef = useRef<HTMLSpanElement>(null);
+  const rangeRef = useRef<HTMLInputElement>(null);
+  const chart = useRef<ChartApi | null>(null);
+  const lastKey = useRef("");
+  const lastT = useRef(-1);
+
+  const apply = (v: number) => {
+    const m = metricsAt(st.before, st.after, v);
+    const shape = shapeFor(m);
+    const b = body.current;
+    b.fat = shape.fat;
+    b.muscle = shape.muscle;
+    b.posture = v;
+
+    if (railRef.current) railRef.current.style.transform = `scaleX(${v})`;
+    if (thumbRef.current) thumbRef.current.style.left = `${v * 100}%`;
+    const r = rangeRef.current;
+    if (r && document.activeElement !== r) r.value = String(Math.round(v * 1000));
+    chart.current?.set(v);
+    // the colour grade restyles the whole section (filters, blurs): step it in 1% increments, which is invisible
+    const t = Math.round(v * 100) / 100;
+    if (t !== lastT.current) {
+      lastT.current = t;
+      sectionRef.current?.style.setProperty("--t", String(t));
+    }
+
+    const key = `${story}|${Math.round(v * st.months * 4.33)}|${round(m.weight)}|${round(m.fat)}|${round(m.strength)}|${v >= 0.999 ? 1 : 0}`;
+    if (key !== lastKey.current) {
+      lastKey.current = key;
+      setP(v);
+    }
+  };
+  const applyRef = useRef(apply);
+  applyRef.current = apply;
+  useEffect(() => pv.on("change", (v) => applyRef.current(v)), [pv]);
+  // paint the current position on mount and whenever the story (and so every curve) changes
+  useLayoutEffect(() => {
+    lastKey.current = "";
+    applyRef.current(pv.get());
+  }, [story, pv]);
+
+  const seek = (v: number) => {
+    pv.set(v);
+    applyRef.current(v);
+  };
+  const forward = (from: number) => {
     anim.current = animate(pv, 1, {
       duration: PLAY_S * (1 - from),
       ease: [0.45, 0, 0.25, 1],
-      onComplete: () => setPlaying(false),
+      onComplete: () => {
+        anim.current = null;
+        setPlaying(false);
+      },
     });
+  };
+  const play = (restart = false) => {
+    anim.current?.stop();
+    setPlaying(true);
+    const from = pv.get();
+    if (restart) {
+      seek(0);
+      forward(0);
+    } else if (from >= 0.999) {
+      // run it again: rewind smoothly to day one instead of snapping, then play
+      anim.current = animate(pv, 0, { duration: 0.9, ease: [0.65, 0, 0.35, 1], onComplete: () => forward(0) });
+    } else forward(from);
   };
   const stop = () => {
     anim.current?.stop();
+    anim.current = null;
     setPlaying(false);
   };
 
   // the time-lapse plays itself the first time the section comes into view, and for each new story
   useEffect(() => {
     if (!seen) return;
-    if (reduce) pv.set(1);
-    else play(0);
-    return () => anim.current?.stop();
+    if (reduce) seek(1);
+    else play(true);
+    return () => {
+      anim.current?.stop();
+      anim.current = null;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seen, story, reduce]);
 
-  // ── what the 3D body is asked to become right now
+  // what React renders: weeks, months and rounded numbers
   const now = metricsAt(st.before, st.after, p);
-  const shape = shapeFor(now);
-  const body = useRef<BodyInput>({ fat: 0, muscle: 0, posture: 0, yaw: 0, sway: true });
-  body.current.fat = shape.fat;
-  body.current.muscle = shape.muscle;
-  body.current.posture = p;
-  body.current.sway = !reduce;
 
   // ── drag to turn him
   const drag = useRef<{ x: number; yaw: number } | null>(null);
@@ -172,7 +290,13 @@ export function Transformations() {
   const milestone = milestoneAt(st.milestones, month);
 
   return (
-    <section ref={nearRef} className="section tfx" style={{ "--t": p } as React.CSSProperties}>
+    <section
+      ref={(el) => {
+        nearRef.current = el;
+        sectionRef.current = el;
+      }}
+      className="section tfx"
+    >
       <div className="container">
         <div className="section-head">
           <p className="eyebrow">Transformations</p>
@@ -250,12 +374,12 @@ export function Transformations() {
 
             {/* timeline scrubber */}
             <div className="tfx__scrub" onPointerDown={(e) => e.stopPropagation()}>
-              <button type="button" className="tfx__play" onClick={() => (playing ? stop() : play(p >= 0.999 ? 0 : p))} aria-label={playing ? "Pause the time-lapse" : "Play the time-lapse"} data-cursor="">
+              <button type="button" className="tfx__play" onClick={() => (playing ? stop() : play())} aria-label={playing ? "Pause the time-lapse" : "Play the time-lapse"} data-cursor="">
                 {playing ? "❚❚" : p >= 0.999 ? "↺" : "▶"}
               </button>
               <div className="tfx__track">
                 <div className="tfx__rail">
-                  <i style={{ transform: `scaleX(${p})` }} />
+                  <i ref={railRef} />
                 </div>
                 {st.milestones.map((m) => (
                   <span
@@ -266,7 +390,7 @@ export function Transformations() {
                     <em>{m.title}</em>
                   </span>
                 ))}
-                <span className="tfx__thumb" style={{ left: `${p * 100}%` }} aria-hidden />
+                <span ref={thumbRef} className="tfx__thumb" aria-hidden />
                 <label className="sr-only" htmlFor="tfx-range">
                   Transformation progress
                 </label>
@@ -275,12 +399,13 @@ export function Transformations() {
                   type="range"
                   min={0}
                   max={1000}
-                  value={Math.round(p * 1000)}
+                  ref={rangeRef}
+                  defaultValue={0}
                   aria-valuetext={`Month ${month} of ${st.months}`}
                   onPointerDown={stop}
                   onKeyDown={stop}
                   onChange={(e) => {
-                    stop();
+                    if (anim.current) stop();
                     pv.set(Number(e.target.value) / 1000);
                   }}
                   data-cursor="Drag"
@@ -314,16 +439,7 @@ export function Transformations() {
 
             <AnimatePresence mode="wait">
               <motion.blockquote key={story} className="tfx__quote" exit={{ opacity: 0, transition: { duration: 0.2 } }}>
-                {`“${st.quote}”`.split(" ").map((w, i) => (
-                  <motion.span
-                    key={i}
-                    initial={{ opacity: 0, y: 12, filter: "blur(6px)" }}
-                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                    transition={{ duration: 0.5, delay: i * 0.03, ease: EASE }}
-                  >
-                    {w}{" "}
-                  </motion.span>
-                ))}
+                <Quote text={st.quote} />
               </motion.blockquote>
             </AnimatePresence>
 
@@ -344,7 +460,7 @@ export function Transformations() {
             </div>
 
             <div className="tfx__progress">
-              <ProgressChart st={st} p={p} />
+              <ProgressChart st={st} month={month} api={chart} />
               <div className="tfx__legend">
                 {METRICS.map((c) => (
                   <div key={c.key}>
