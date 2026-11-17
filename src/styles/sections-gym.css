@@ -88,6 +88,8 @@
   opacity: calc(1 - var(--pi) * 1.15);
   transform: translateY(calc(var(--pi) * -70px)) scale(calc(1 + var(--pi) * 0.22));
   filter: blur(calc(var(--pi) * 18px));
+  /* own GPU layer: the scroll-out (lift, swell, blur) is composited instead of repainting over the live 3D gate */
+  will-change: transform, opacity, filter;
 
   .btn,
   a {
@@ -111,6 +113,8 @@
   letter-spacing: 0.22em;
   margin-right: -0.22em; /* optical centring: cancel the trailing letter-space */
   white-space: nowrap;
+  /* one shadow for the whole word (was two per letter: 14 filter passes re-run on every frame of the gold sheen) */
+  filter: drop-shadow(0 6px 30px oklch(0 0 0 / 0.75)) drop-shadow(0 0 22px color-mix(in oklch, var(--gold) 22%, transparent));
 }
 
 .hero__char {
@@ -126,7 +130,6 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 6px 30px oklch(0 0 0 / 0.75)) drop-shadow(0 0 22px color-mix(in oklch, var(--gold) 22%, transparent));
 }
 
 @keyframes hero-sheen {
@@ -1077,37 +1080,24 @@
 }
 .rope--strand {
   --lay: calc(var(--rope-w) * 1.1);
-  --row: calc(var(--rope-w) * 0.22);
   stroke-width: calc(var(--rope-w) * 0.3);
   stroke-dasharray: calc(var(--lay) * 0.46) calc(var(--lay) * 0.54);
+  stroke-dashoffset: calc(var(--travel, 0px) - var(--lay) * var(--phase));
   stroke-linecap: round;
 }
-.rope--strand-1 {
-  stroke: #d2a764;
-  transform: translate(0, calc(var(--row) * -1.5));
-}
-.rope--strand-2 {
-  stroke: #b48a4f;
-  transform: translate(calc(var(--lay) * 0.25), calc(var(--row) * -0.5));
-}
-.rope--strand-3 {
-  stroke: #91693a;
-  transform: translate(calc(var(--lay) * 0.5), calc(var(--row) * 0.5));
-}
-.rope--strand-4 {
-  stroke: #684a27;
-  transform: translate(calc(var(--lay) * 0.75), calc(var(--row) * 1.5));
-}
+/* rows are offset across the rope along its normal in JS; here each is shifted a quarter lay along it */
+.rope--strand-1 { stroke: #d2a764; --phase: 0; }
+.rope--strand-2 { stroke: #b48a4f; --phase: 0.25; }
+.rope--strand-3 { stroke: #91693a; --phase: 0.5; }
+.rope--strand-4 { stroke: #684a27; --phase: 0.75; }
 .rope--sheen {
   stroke: rgb(255 226 160 / 0.3);
   stroke-width: calc(var(--rope-w) * 0.1);
-  transform: translateY(calc(var(--rope-w) * -0.34));
   filter: drop-shadow(0 0 3px rgb(212 175 55 / 0.45));
 }
 .rope--underside {
   stroke: rgb(0 0 0 / 0.45);
   stroke-width: calc(var(--rope-w) * 0.2);
-  transform: translateY(calc(var(--rope-w) * 0.4));
 }
 
 /* the athlete: stands at the left of the stage, feet just below the cards' baseline, fists on the rope line */
@@ -1565,8 +1555,54 @@
 }
 
 ::view-transition-group(*) {
-  animation-duration: 0.65s;
-  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-duration: 0.7s;
+  animation-timing-function: cubic-bezier(0.77, 0, 0.18, 1);
+}
+/* portrait morph: clip to rounded corners and crop instead of stretching between aspect ratios */
+::view-transition-group(*.tportrait) {
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 40px 120px -30px color-mix(in oklch, var(--ember) 55%, transparent);
+}
+::view-transition-old(*.tportrait),
+::view-transition-new(*.tportrait) {
+  height: 100%;
+  object-fit: cover;
+  animation-duration: 0.7s;
+}
+
+/* panel + content reveal (plays live inside the root snapshot) */
+.tmodal__panel {
+  animation: tpanel-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.tmodal__body > * {
+  animation: tbody-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.tmodal__body > :nth-child(1) { animation-delay: 0.25s; }
+.tmodal__body > :nth-child(2) { animation-delay: 0.31s; }
+.tmodal__body > :nth-child(3) { animation-delay: 0.37s; }
+.tmodal__body > :nth-child(4) { animation-delay: 0.43s; }
+.tmodal__body > :nth-child(5) { animation-delay: 0.49s; }
+.tmodal__body > :nth-child(6) { animation-delay: 0.55s; }
+.tmodal__body > :nth-child(n + 7) { animation-delay: 0.61s; }
+.tmodal__close {
+  animation: tbody-in 0.5s 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes tpanel-in {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+}
+@keyframes tbody-in {
+  from { opacity: 0; transform: translateY(16px); filter: blur(6px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  .tmodal__panel,
+  .tmodal__body > *,
+  .tmodal__close {
+    animation: none !important;
+  }
 }
 
 @media (max-width: 1000px) {
@@ -1649,29 +1685,74 @@
   color: var(--gold);
 }
 
-/* Hexagon badge with an @property-animated rotating conic border */
+/* Hexagon badge with a rotating conic border.
+   The gradient sits on an oversized ::before that spins with `transform`, so the GPU composites it:
+   animating --angle inside conic-gradient repaints every frame and stutters/freezes in Edge. */
 .rank__badge {
-  --angle: 0deg;
+  position: relative;
+  isolation: isolate;
   width: 150px;
   aspect-ratio: 1 / 1.1;
   padding: 3px;
   clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
-  background: conic-gradient(from var(--angle), var(--gold-deep), var(--gold-bright), var(--ember), var(--gold-deep) 50%, var(--gold-bright), var(--gold-deep));
-  animation: spin calc(6s - var(--i) * 1s) linear infinite;
-  filter: drop-shadow(0 0 20px color-mix(in oklch, var(--ember) 30%, transparent));
+  background: var(--gold-deep);
   transition: transform 0.8s var(--ease-out);
 
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -25%; /* big enough to cover the hexagon at every angle */
+    z-index: -1;
+    background: conic-gradient(var(--gold-deep), var(--gold-bright), var(--ember), var(--gold-deep) 50%, var(--gold-bright), var(--gold-deep));
+    animation: badge-spin calc(6s - var(--i) * 1s) linear infinite;
+    will-change: transform;
+  }
+}
+@keyframes badge-spin {
+  to { transform: rotate(1turn); }
+}
+
+/* Hover "forge ignite": the badge lifts, an ember glow blooms around the hexagon, one light streak
+   sweeps the face like polished metal, and the numeral brightens. Hover is read from this still
+   wrapper (not the moving badge), and it has no clip-path, so its drop-shadow glow is not cut off. */
+.rank__flip {
+  filter: drop-shadow(0 0 0 transparent);
+  transition: filter 0.6s var(--ease-out);
+
   &:hover {
-    transform: rotateY(180deg) scale(1.06);
+    filter: drop-shadow(0 0 22px color-mix(in oklch, var(--ember) 55%, transparent))
+      drop-shadow(0 14px 18px oklch(0 0 0 / 0.5));
+  }
+  &:hover .rank__badge {
+    transform: translateY(-10px) scale(1.04);
+  }
+  &:hover .rank__face::after {
+    translate: 130% 0;
+    transition: translate 0.9s cubic-bezier(0.3, 0.7, 0.2, 1);
+  }
+  &:hover .rank__level {
+    scale: 1.08;
+    filter: brightness(1.3) drop-shadow(0 0 10px color-mix(in oklch, var(--gold-bright) 60%, transparent));
   }
 }
 
 .rank__face {
+  position: relative;
   height: 100%;
   display: grid;
   place-items: center;
   clip-path: inherit;
   background: radial-gradient(circle at 50% 30%, oklch(0.3 0.06 calc(60 + var(--i) * 8)), var(--ink) 75%);
+
+  /* the light streak: parked off the left edge, sweeps across once on hover, snaps back unseen on leave */
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(105deg, transparent 35%, oklch(0.95 0.06 85 / 0.28) 50%, transparent 65%);
+    translate: -130% 0;
+  }
 }
 
 .rank__level {
@@ -1681,6 +1762,7 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  transition: scale 0.6s var(--ease-out), filter 0.6s var(--ease-out);
 }
 
 @media (max-width: 860px) {

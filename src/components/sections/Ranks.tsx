@@ -50,9 +50,12 @@ export function Ranks() {
           </svg>
           {ranks.map((r, i) => (
             <div key={r.name} className="rank" style={{ "--i": i } as React.CSSProperties}>
-              <div className="rank__badge" data-cursor="">
-                <div className="rank__face">
-                  <span className="rank__level">{r.level}</span>
+              {/* still hover area + glow layer: the badge inside lifts, this box stays put */}
+              <div className="rank__flip">
+                <div className="rank__badge" data-cursor="">
+                  <div className="rank__face">
+                    <span className="rank__level">{r.level}</span>
+                  </div>
                 </div>
               </div>
               <h3>{r.name}</h3>

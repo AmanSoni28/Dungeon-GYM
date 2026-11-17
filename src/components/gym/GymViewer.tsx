@@ -15,6 +15,7 @@ import {
 } from "@/lib/gym/look";
 import { journeyPhases, journeyVisuals, scrollYaw } from "@/lib/gym/journey";
 import { Dust, PhotoScreen, preparePhotoTexture } from "@/components/gym/PhotoScreen";
+import { useAdaptiveDpr } from "@/components/three/useAdaptiveDpr";
 
 import type { GymLookState } from "@/lib/gym/state";
 
@@ -119,15 +120,17 @@ function Ready({ onReady }: { onReady?: () => void }) {
 
 export default function GymViewer({ view, look, running, lite, autoRotate, onLook, onReady }: Props) {
   const brightness = useRef(1);
+  const { dpr, monitor } = useAdaptiveDpr(lite ? 1 : 1.5);
   return (
     <Canvas
-      dpr={lite ? 1 : [1, 1.5]}
+      dpr={dpr}
       frameloop={running ? "always" : "never"}
       camera={{ position: [0, 0, 0], fov: 50, near: 0.05, far: 50 }}
       gl={{ antialias: !lite, powerPreference: "high-performance" }}
       style={{ touchAction: "pan-y" }}
     >
       <color attach="background" args={["#050505"]} />
+      {monitor}
       <Suspense fallback={null}>
         <Screen view={view} brightness={brightness} />
         <Ready onReady={onReady} />

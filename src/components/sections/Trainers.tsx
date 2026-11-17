@@ -23,7 +23,13 @@ function Portrait({ t, vt }: { t: Trainer; vt: boolean }) {
   return (
     <div
       className="portrait"
-      style={{ "--h": t.hue, viewTransitionName: vt ? `trainer-${t.id}` : undefined } as React.CSSProperties}
+      style={
+        {
+          "--h": t.hue,
+          viewTransitionName: vt ? `trainer-${t.id}` : undefined,
+          viewTransitionClass: vt ? "tportrait" : undefined,
+        } as React.CSSProperties
+      }
     >
       {t.image ? (
         <>
@@ -51,12 +57,12 @@ function Portrait({ t, vt }: { t: Trainer; vt: boolean }) {
   );
 }
 
-function Card({ t, index, onOpen, hidden }: { t: Trainer; index: number; onOpen: () => void; hidden: boolean }) {
+function Card({ t, index, onOpen, morph }: { t: Trainer; index: number; onOpen: () => void; morph: boolean }) {
   const tilt = useTilt(14);
   return (
     <button className="tcard" onClick={onOpen} {...tilt} data-cursor="Select" style={{ "--i": index } as React.CSSProperties}>
       <div className="tcard__inner">
-        <Portrait t={t} vt={!hidden} />
+        <Portrait t={t} vt={morph} />
         <span className="tcard__shine" />
         <div className="tcard__body">
           <span className="tcard__title">{t.title}</span>
@@ -82,6 +88,12 @@ function Card({ t, index, onOpen, hidden }: { t: Trainer; index: number; onOpen:
 
 export function Trainers() {
   const [open, setOpen] = useState<Trainer | null>(null);
+  // Only the clicked card carries a view-transition-name; naming all of them lifted every portrait above the modal.
+  const [active, setActive] = useState<string | null>(null);
+  const openCard = (t: Trainer) => {
+    flushSync(() => setActive(t.id));
+    withTransition(() => setOpen(t));
+  };
 
   useEffect(() => {
     if (open) window.__lenis?.stop();
@@ -102,7 +114,7 @@ export function Trainers() {
 
         <div className="tgrid">
           {trainers.map((t, i) => (
-            <Card key={t.id} t={t} index={i} hidden={open?.id === t.id} onOpen={() => withTransition(() => setOpen(t))} />
+            <Card key={t.id} t={t} index={i} morph={!open && active === t.id} onOpen={() => openCard(t)} />
           ))}
         </div>
       </div>

@@ -73,7 +73,14 @@ export function FireToWater() {
     let raf = 0;
     let visible = false;
     let last = performance.now();
-    const io = new IntersectionObserver(([e]) => (visible = e.isIntersecting));
+    // offscreen: no frames scheduled at all; resume on re-entry
+    const io = new IntersectionObserver(([e]) => {
+      visible = e.isIntersecting;
+      if (visible && !raf) {
+        last = performance.now();
+        raf = requestAnimationFrame(loop);
+      }
+    });
     io.observe(cv);
 
     const resize = () => {
@@ -85,10 +92,13 @@ export function FireToWater() {
     window.addEventListener("resize", resize);
 
     const loop = (now: number) => {
+      if (!visible) {
+        raf = 0;
+        return;
+      }
       raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      if (!visible) return;
       const p = prog.current;
       const W = cv.width;
       const H = cv.height;
@@ -113,7 +123,6 @@ export function FireToWater() {
       }
       g.globalAlpha = 1;
     };
-    raf = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(raf);
       io.disconnect();

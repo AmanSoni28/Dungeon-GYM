@@ -184,12 +184,20 @@ export function GroupClasses() {
 
       // ── rope ──
       vib *= Math.exp(-dt * 4.2);
-      const run = ropePath(pts, s.tension, (i) => (i < 3 ? 0 : vibration(vib, time, i * 1.7) * (i === 3 ? 1.4 : 0.8)), (i) => rigidAfter.has(i));
-      const d = run;
-      const travel = s.hauled.toFixed(1); // the braid travels with the rope being hauled in
+      const wob = (i: number) => (i < 3 ? 0 : vibration(vib, time, i * 1.7) * (i === 3 ? 1.4 : 0.8));
+      const run = ropePath(pts, s.tension, wob, (i) => rigidAfter.has(i));
+      // strands, sheen and underside ride along the rope's normal (in rope widths), so it is equally thick at any angle
+      const rw = Math.max(7, L.ah * 0.024);
+      const offs = new Map<string, string>();
+      st.style.setProperty("--travel", `${s.hauled.toFixed(1)}px`); // the braid travels with the rope being hauled in
       for (const p of paths.current) {
-        p.setAttribute("d", d);
-        if (p.dataset.strand !== undefined) p.style.strokeDashoffset = travel;
+        const o = p.dataset.off;
+        if (o === undefined) {
+          p.setAttribute("d", run);
+          continue;
+        }
+        if (!offs.has(o)) offs.set(o, ropePath(pts, s.tension, wob, (i) => rigidAfter.has(i), Number(o) * rw));
+        p.setAttribute("d", offs.get(o)!);
       }
       if (meter.current) {
         meter.current.style.setProperty("--haul", (s.hauled / (R.total || 1)).toFixed(4));
@@ -281,11 +289,12 @@ export function GroupClasses() {
             </defs>
             <path ref={setPath(0)} className="rope rope--shadow" filter="url(#rope-shadow-blur)" />
             <path ref={setPath(1)} className="rope rope--core" />
-            {[1, 2, 3, 4].map((k) => (
-              <path key={k} ref={setPath(1 + k)} className={`rope rope--strand rope--strand-${k}`} data-strand="" />
+            {/* strand rows sit 0.22 rope-widths apart across the rope (data-off: rope widths along its normal) */}
+            {[0.33, 0.11, -0.11, -0.33].map((off, k) => (
+              <path key={k} ref={setPath(2 + k)} className={`rope rope--strand rope--strand-${k + 1}`} data-off={off} />
             ))}
-            <path ref={setPath(6)} className="rope rope--sheen" />
-            <path ref={setPath(7)} className="rope rope--underside" />
+            <path ref={setPath(6)} className="rope rope--sheen" data-off="0.34" />
+            <path ref={setPath(7)} className="rope rope--underside" data-off="-0.4" />
           </svg>
 
           <div

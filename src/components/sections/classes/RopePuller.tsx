@@ -9,6 +9,7 @@
 // Writes back where his fists and the rope's tail are on the canvas, so the SVG rope runs exactly through his grip.
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useAdaptiveDpr } from "@/components/three/useAdaptiveDpr";
 import { Suspense, use, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
@@ -497,9 +498,10 @@ function Lights() {
 }
 
 export default function RopePuller({ rig, marks, running }: { rig: RopeRig; marks: HandMarks; running: boolean }) {
+  const { dpr, monitor } = useAdaptiveDpr(1.75);
   return (
     <Canvas
-      dpr={[1, 1.75]}
+      dpr={dpr}
       frameloop={running ? "always" : "never"}
       gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
       camera={{ fov: CAM.fov, position: [...CAM.pos], near: 0.1, far: 30 }}
@@ -510,6 +512,7 @@ export default function RopePuller({ rig, marks, running }: { rig: RopeRig; mark
       }}
       style={{ pointerEvents: "none" }}
     >
+      {monitor}
       <Lights />
       <ContactShadow />
       <Suspense fallback={null}>

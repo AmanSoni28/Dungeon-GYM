@@ -161,24 +161,44 @@ export type RopePoint = { x: number; y: number };
  * SVG path for the rope through the given points (left → right). Each free span hangs with a sag
  * that grows with its length and with slack, plus a little vibration. `rigid` spans (behind a card,
  * between its two eyelets) stay straight.
+ * `offset` (px, + = the rope's upper side) returns the same rope shifted along its own normal instead, as a
+ * polyline: strand rows stay across the rope at any angle, so a steep stretch is no thicker than a flat one.
  */
-export function ropePath(points: RopePoint[], tension: number, wobble: (i: number) => number, rigid: (i: number) => boolean) {
+export function ropePath(points: RopePoint[], tension: number, wobble: (i: number) => number, rigid: (i: number) => boolean, offset = 0) {
   if (points.length < 2) return "";
   const slack = 1 - clamp01(tension);
-  let d = `M${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+  const f = (v: number) => v.toFixed(1);
+  let d = "";
+  // a point on the curve a→c→b at u, pushed `offset` along the normal (left of the direction of travel)
+  const put = (ax: number, ay: number, cx: number, cy: number, bx: number, by: number, u: number) => {
+    const w = 1 - u;
+    const x = w * w * ax + 2 * w * u * cx + u * u * bx;
+    const y = w * w * ay + 2 * w * u * cy + u * u * by;
+    let tx = w * (cx - ax) + u * (bx - cx);
+    let ty = w * (cy - ay) + u * (by - cy);
+    const len = Math.hypot(tx, ty) || 1;
+    tx /= len;
+    ty /= len;
+    d += `${d ? "L" : "M"}${f(x + ty * offset)} ${f(y - tx * offset)}`;
+  };
+  if (!offset) d = `M${f(points[0].x)} ${f(points[0].y)}`;
   for (let i = 1; i < points.length; i++) {
     const a = points[i - 1];
     const b = points[i];
-    if (rigid(i - 1)) {
-      d += `L${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
+    let cx = (a.x + b.x) / 2;
+    let cy = (a.y + b.y) / 2;
+    if (!rigid(i - 1)) {
+      const span = Math.abs(b.x - a.x);
+      const sag = Math.min(90, span * (0.012 + 0.11 * slack)) + wobble(i - 1);
+      // quadratic control point twice the sag below the chord's midpoint (the curve dips by `sag`)
+      cy += sag * 2;
+    }
+    if (!offset) {
+      d += rigid(i - 1) ? `L${f(b.x)} ${f(b.y)}` : `Q${f(cx)} ${f(cy)} ${f(b.x)} ${f(b.y)}`;
       continue;
     }
-    const span = Math.abs(b.x - a.x);
-    const sag = Math.min(90, span * (0.012 + 0.11 * slack)) + wobble(i - 1);
-    // quadratic control point twice the sag below the chord's midpoint (the curve dips by `sag`)
-    const cx = (a.x + b.x) / 2;
-    const cy = (a.y + b.y) / 2 + sag * 2;
-    d += `Q${cx.toFixed(1)} ${cy.toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
+    const steps = Math.max(2, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 6));
+    for (let s = i === 1 ? 0 : 1; s <= steps; s++) put(a.x, a.y, cx, cy, b.x, b.y, s / steps);
   }
   return d;
 }

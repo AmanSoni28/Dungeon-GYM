@@ -81,6 +81,7 @@ const smooth = (v: number) => {
 
 export function PostFX({ clock }: { clock: React.MutableRefObject<SmashClock> }) {
   const { gl, scene, camera, size } = useThree();
+  const dpr = useThree((s) => s.viewport.dpr); // follow adaptive quality when it changes the pixel ratio
 
   const fx = useMemo(() => {
     const composer = new EffectComposer(gl);
@@ -99,7 +100,7 @@ export function PostFX({ clock }: { clock: React.MutableRefObject<SmashClock> })
     fx.composer.setPixelRatio(gl.getPixelRatio());
     fx.composer.setSize(size.width, size.height);
     fx.bloom.resolution.set(size.width, size.height);
-  }, [fx, gl, size]);
+  }, [fx, gl, size, dpr]);
 
   useEffect(() => () => fx.composer.dispose(), [fx]);
 

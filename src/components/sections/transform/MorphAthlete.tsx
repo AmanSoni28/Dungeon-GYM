@@ -8,6 +8,7 @@
 // Writes back where his chest, belly and arm are on the canvas, so the HTML callouts stay pinned to his body.
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useAdaptiveDpr } from "@/components/three/useAdaptiveDpr";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
@@ -367,9 +368,10 @@ function ContactShadow() {
 }
 
 export default function MorphAthlete({ input, marks, running }: { input: BodyInput; marks: BodyMarks; running: boolean }) {
+  const { dpr, monitor } = useAdaptiveDpr(1.75);
   return (
     <Canvas
-      dpr={[1, 1.75]}
+      dpr={dpr}
       frameloop={running ? "always" : "never"}
       gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
       camera={{ fov: CAM.fov, position: [...CAM.pos], near: 0.1, far: 30 }}
@@ -379,6 +381,7 @@ export default function MorphAthlete({ input, marks, running }: { input: BodyInp
         gl.toneMappingExposure = 1.05;
       }}
     >
+      {monitor}
       <Environment />
       <Lights input={input} />
       <ContactShadow />

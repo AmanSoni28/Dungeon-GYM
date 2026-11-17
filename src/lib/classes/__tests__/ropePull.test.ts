@@ -157,6 +157,16 @@ describe("rope path", () => {
     expect(d).toContain("L530.0 100.0");
   });
 
+  it("offsets along the rope's normal, so a vertical stretch shifts sideways and a flat one upward", () => {
+    const flat = ropePath([{ x: 0, y: 100 }, { x: 100, y: 100 }], 1, () => 0, () => true, 5);
+    expect(flat.startsWith("M0.0 95.0")).toBe(true);
+    expect(flat.endsWith("100.0 95.0")).toBe(true);
+    // rope running down the screen: "upper side" is to its right (+x), and it stays the same distance off
+    const down = ropePath([{ x: 50, y: 0 }, { x: 50, y: 100 }], 1, () => 0, () => true, 5);
+    expect(down.startsWith("M55.0 0.0")).toBe(true);
+    expect(down.endsWith("55.0 100.0")).toBe(true);
+  });
+
   it("returns nothing without two points", () => {
     expect(ropePath([pts[0]], 1, () => 0, () => false)).toBe("");
   });

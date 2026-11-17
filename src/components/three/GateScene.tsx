@@ -10,6 +10,7 @@ import { cameraFov, cameraPush, CAMERA_PUSH_Z, createSmashClock, doorOpen, SCRUB
 import { shakeOffset } from "@/lib/intro/shake";
 import { Atmosphere, Dumbbell, ImpactFX, SmashDirector } from "./gate/SmashFX";
 import { PostFX } from "./gate/PostFX";
+import { useAdaptiveDpr } from "./useAdaptiveDpr";
 
 type Prog = React.MutableRefObject<number>;
 type Smash = React.MutableRefObject<SmashClock>;
@@ -595,13 +596,15 @@ function Warmup({ onReady }: { onReady?: () => void }) {
 export default function GateScene({ progress, active = true, smash, lite = false, onReady }: GateSceneProps) {
   const fallback = useRef<SmashClock>(createSmashClock());
   const clock = smash ?? fallback;
+  const { dpr, monitor } = useAdaptiveDpr(lite ? 1.25 : 1.6);
   return (
     <Canvas
-      dpr={lite ? [1, 1.25] : [1, 1.6]}
+      dpr={dpr}
       frameloop={active ? "always" : "never"}
       camera={{ position: [0, 1.7, 14], fov: 58, near: 0.1, far: 70 }}
       gl={{ antialias: !lite, powerPreference: "high-performance" }}
     >
+      {monitor}
       <Warmup onReady={onReady} />
       <color attach="background" args={["#050505"]} />
       <fog attach="fog" args={["#050505", 8, 44]} />
